@@ -1,6 +1,11 @@
 import { jsxRenderer } from 'hono/jsx-renderer'
+import { PARAMS } from '../constants/params'
 
-export default jsxRenderer(({ children, title }) => {
+// PARAMS の値を変数 PSO2JSON として参照できるようにするため、
+// JavaScript の変数宣言の処理を文字列表現で作成し、
+// HTML エスケープして script タグに出力する
+const paramsDefine = `const PSO2JSON = ${JSON.stringify(PARAMS)}`
+export default jsxRenderer(() => {
   return (
     <html lang="jp">
       <head>
@@ -16,13 +21,13 @@ export default jsxRenderer(({ children, title }) => {
       <script type="text/javascript" src="ext-4.0.7-gpl/examples/ux/grid/filter/Filter.js"></script>
       <script type="text/javascript" src="ext-4.0.7-gpl/examples/ux/grid/filter/StringFilter.js"></script>
       <script type="text/javascript" src="CurrencyField.js"></script>
-      <script type="text/javascript" charset="utf-8" src="params.json"></script>
       <script type="text/javascript" charset="utf-8" src="utils.js"></script>
       <script type="text/javascript" charset="utf-8" src="cost.js"></script>
       <script type="text/javascript" charset="utf-8" src="ability.js"></script>
       <script type="text/javascript" charset="utf-8" src="result.js"></script>
       <script type="text/javascript" charset="utf-8" src="synthesis.js"></script>
       <script type="text/javascript" charset="utf-8" src="init.js"></script>
+      <script type="text/javascript" charset="utf-8" dangerouslySetInnerHTML={{ __html: paramsDefine }}></script>
       </head>
     </html>
   )

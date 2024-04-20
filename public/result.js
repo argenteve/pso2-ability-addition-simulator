@@ -473,7 +473,7 @@ Ext.define('PSO2.ResultPanel', {
 	 */
 	refresh: function() {
 		var me = this, vp = me.viewPanel, sp = me.successPanel,
-			boostFn = me.getSelectOptionRecord(me.selOpt1).get('fn'),
+			boostFn = evalStringToAny(me.getSelectOptionRecord(me.selOpt1).get('fn')),
 			sames = me.chkOpt1.getSameCount(), i, success = 100, ss = [], sss;
 
 		/* 結果パネルの更新 */
@@ -736,7 +736,7 @@ Ext.define('PSO2.ResultPanel', {
 	 */
 	doDo: function(success, fail) {
 		var me = this,
-			boostFn = me.getSelectOptionRecord(me.selOpt1).get('fn'),
+			boostFn = evalStringToAny(me.getSelectOptionRecord(me.selOpt1).get('fn')),
 			sames = me.chkOpt1.getSameCount(), items = me.successItems,
 			len = items.length, i, sss;
 
@@ -1026,7 +1026,7 @@ Ext.define('PSO2.ResultPanel', {
 				fields.push(vname);
 				for (j = 0; j < cnt; j++) {
 					/* ヘッダ毎の確率 */
-					var p = me.getSuccessPattern(i, success, opt.getAt(j).get('fn'));
+					var p = me.getSuccessPattern(i, success, evalStringToAny(opt.getAt(j).get('fn')));
 
 					html += '<td';
 					if (p == 1) html += ' id="bold"';
@@ -1143,3 +1143,14 @@ Ext.define('PSO2.ResultPanel', {
 		}
 	}
 });
+
+/**
+ * 指定された文字列表現を JavaScript として評価した結果を返します
+ * @param {string} _str 文字列
+ * @returns 文字列表現を JavaScript として評価した結果
+ */
+const evalStringToAny = function(_str) {
+	let result
+	eval(`result = ${_str}`)
+	return result
+}

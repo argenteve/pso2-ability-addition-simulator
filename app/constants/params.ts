@@ -1,4 +1,4 @@
-{
+export const PARAMS = {
 	/** 最終更新日(プログラムには利用していません) */
 	lastModified: '2015-11-04 12:00:00(JST)',
 
@@ -10,12 +10,12 @@
 	 */
 	optionList: {
 		support: [
-			{name: '指定なし',           sname: '指定なし', value: 'A01', fn: function(v){ return v; }},
-			{name: '能力追加成功率+5%',  sname: '+5%',      value: 'A02', fn: function(v){ return Math.min(v +  5, 100); }},
-			{name: '能力追加成功率+10%', sname: '+10%',     value: 'A03', fn: function(v){ return Math.min(v + 10, 100); }},
-			{name: '能力追加成功率+20%', sname: '+20%',     value: 'A04', fn: function(v){ return Math.min(v + 20, 100); }},
-			{name: '能力追加成功率+30%', sname: '+30%',     value: 'A05', fn: function(v){ return Math.min(v + 30, 100); }},
-			{name: '能力追加成功率+40%', sname: '+40%',     value: 'A06', fn: function(v){ return Math.min(v + 40, 100); }}
+			{name: '指定なし',           sname: '指定なし', value: 'A01', fn: 'function(v){ return v; }'},
+			{name: '能力追加成功率+5%',  sname: '+5%',      value: 'A02', fn: 'function(v){ return Math.min(v +  5, 100); }'},
+			{name: '能力追加成功率+10%', sname: '+10%',     value: 'A03', fn: 'function(v){ return Math.min(v + 10, 100); }'},
+			{name: '能力追加成功率+20%', sname: '+20%',     value: 'A04', fn: 'function(v){ return Math.min(v + 20, 100); }'},
+			{name: '能力追加成功率+30%', sname: '+30%',     value: 'A05', fn: 'function(v){ return Math.min(v + 30, 100); }'},
+			{name: '能力追加成功率+40%', sname: '+40%',     value: 'A06', fn: 'function(v){ return Math.min(v + 40, 100); }'}
 		],
 		additional: [
 			{name: '指定なし',             value: 'B01'},

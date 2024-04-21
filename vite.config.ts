@@ -13,6 +13,7 @@ export default defineConfig(({ mode }) => {
   } else {
     return {
       build: {
+        outDir: 'docs',
         emptyOutDir: false,
       },
       plugins: [honox(), ssg({ entry })],

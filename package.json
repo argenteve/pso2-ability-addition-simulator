@@ -3,7 +3,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "rm -rf ./dist && vite build --mode client && vite build",
+    "clean": "rm -rf ./dist && rm -rf ./docs",
+    "build": "vite build --mode client && vite build",
     "preview": "wrangler pages dev ./dist",
     "deploy": "$npm_execpath run build && wrangler pages deploy ./dist"
   },

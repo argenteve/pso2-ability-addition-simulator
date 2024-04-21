@@ -25,3 +25,5 @@ bun.lockb
 
 #!.yarn/cache
 .pnp.*
+
+.DS_Store

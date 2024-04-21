@@ -11,22 +11,22 @@ export default jsxRenderer(() => {
       <head>
       <meta name="viewport" content="width=device-width, initial-scale=0.5, maximum-scale=4" />
       <title>PSO2 能力追加シミュレーター</title>
-      <link rel="stylesheet" type="text/css" href="ext-4.0.7-gpl/resources/css/ext-all.css" />
-      <link rel="stylesheet" type="text/css" href="default.css" />
-      <script type="text/javascript" src="ext-4.0.7-gpl/ext-all.js"></script>
-      <script type="text/javascript" src="ext-4.0.7-gpl/examples/ux/grid/FiltersFeature.js"></script>
-      <script type="text/javascript" src="ext-4.0.7-gpl/examples/ux/TabCloseMenu.js"></script>
-      <script type="text/javascript" src="ext-4.0.7-gpl/examples/ux/grid/menu/ListMenu.js"></script>
-      <script type="text/javascript" src="ext-4.0.7-gpl/examples/ux/grid/menu/RangeMenu.js"></script>
-      <script type="text/javascript" src="ext-4.0.7-gpl/examples/ux/grid/filter/Filter.js"></script>
-      <script type="text/javascript" src="ext-4.0.7-gpl/examples/ux/grid/filter/StringFilter.js"></script>
-      <script type="text/javascript" src="CurrencyField.js"></script>
-      <script type="text/javascript" charset="utf-8" src="utils.js"></script>
-      <script type="text/javascript" charset="utf-8" src="cost.js"></script>
-      <script type="text/javascript" charset="utf-8" src="ability.js"></script>
-      <script type="text/javascript" charset="utf-8" src="result.js"></script>
-      <script type="text/javascript" charset="utf-8" src="synthesis.js"></script>
-      <script type="text/javascript" charset="utf-8" src="init.js"></script>
+      <link rel="stylesheet" type="text/css" href="static/ext-4.0.7-gpl/resources/css/ext-all.css" />
+      <link rel="stylesheet" type="text/css" href="static/default.css" />
+      <script type="text/javascript" src="static/ext-4.0.7-gpl/ext-all.js"></script>
+      <script type="text/javascript" src="static/ext-4.0.7-gpl/examples/ux/grid/FiltersFeature.js"></script>
+      <script type="text/javascript" src="static/ext-4.0.7-gpl/examples/ux/TabCloseMenu.js"></script>
+      <script type="text/javascript" src="static/ext-4.0.7-gpl/examples/ux/grid/menu/ListMenu.js"></script>
+      <script type="text/javascript" src="static/ext-4.0.7-gpl/examples/ux/grid/menu/RangeMenu.js"></script>
+      <script type="text/javascript" src="static/ext-4.0.7-gpl/examples/ux/grid/filter/Filter.js"></script>
+      <script type="text/javascript" src="static/ext-4.0.7-gpl/examples/ux/grid/filter/StringFilter.js"></script>
+      <script type="text/javascript" src="static/CurrencyField.js"></script>
+      <script type="text/javascript" charset="utf-8" src="static/utils.js"></script>
+      <script type="text/javascript" charset="utf-8" src="static/cost.js"></script>
+      <script type="text/javascript" charset="utf-8" src="static/ability.js"></script>
+      <script type="text/javascript" charset="utf-8" src="static/result.js"></script>
+      <script type="text/javascript" charset="utf-8" src="static/synthesis.js"></script>
+      <script type="text/javascript" charset="utf-8" src="static/init.js"></script>
       <script type="text/javascript" charset="utf-8" dangerouslySetInnerHTML={{ __html: paramsDefine }}></script>
       </head>
     </html>

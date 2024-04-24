@@ -81,6 +81,7 @@ Ext.define('PSO2.ResultPanel', {
 	xtype: 'resultpanel',
 	padding: '0',
 	autoHeight: true,
+	suspendCheckChange: 0,
 
 	/** @cfg {String} constViewPanel @hide */
 	constViewPanel: '-viewpanel',
@@ -90,6 +91,7 @@ Ext.define('PSO2.ResultPanel', {
 
 	/** @cfg {String} constSelOption2 @hide */
 	constSelOption2: '-selopt-2',
+	constSelOption3: "-selopt-3",
 
 	/** @cfg {String} constChkOption1 @hide */
 	constChkOption1: '-chkopt-1',
@@ -112,11 +114,16 @@ Ext.define('PSO2.ResultPanel', {
 	 */
 	redodoButtonText: 'リドゥドゥ',
 
+	moreButtonText: "成功 or 10,000回",
+	moreDodoLimit: 10000,
+
 	/**
 	 * @property {String} monimoniButtonText
 	 * モニター表示用ボタンのテキスト
 	 */
 	monimoniButtonText: 'モニ？',
+
+	ngsButtonText: "レガロ！",
 
 	/**
 	 * 以下はモニター用パラメータ算出のためのプロパティです
@@ -139,6 +146,9 @@ Ext.define('PSO2.ResultPanel', {
 	/* "全属性耐性"時にアップするパラメータ一覧 */
 	resistAll: ['打撃軽減', '射撃軽減', '法撃軽減', '炎耐性', '氷耐性', '雷耐性', '風耐性', '光耐性', '闇耐性'],
 
+	atkAll: ["打撃力", "射撃力", "法撃力"],
+	defAll: ["打撃防御", "射撃防御", "法撃防御"],
+
 	/**
 	 * @cfg {Ext.data.Store} optionStore1
 	 * 能力追加成功率アップのアイテムを定義
@@ -147,8 +157,8 @@ Ext.define('PSO2.ResultPanel', {
 	 *    fn: 計算ロジック
 	 */
 	optionStore1: Ext.create('Ext.data.Store', {
-		fields: ['name', 'sname', 'value', 'fn'],
-		data: PSO2.AbilityOption.support
+		fields: ['id', 'name', 'value', 'fn'],
+		data: {}
 	}),
 
 	/**
@@ -165,15 +175,23 @@ Ext.define('PSO2.ResultPanel', {
 	 * extend: 継承率
 	 */
 	optionStore2: Ext.create('Ext.data.Store', {
-		fields: ['name', 'value', 'extend', 'effect'],
-		data: PSO2.AbilityOption.additional
+		fields: ['id', 'name', 'value', 'extend', 'effect'],
+		data: {}
 	}),
+
+	excludePattern: [],
 
 	/**
 	 * @cfg {String} initOption2Value
 	 * 初期表示オプション番号
 	 */
 	initOption2Value: 'B01',
+
+	optionStore3: Ext.create("Ext.data.Store", {
+		fields: ["id", "name", "value", "fn"],
+		data: {}
+	}),
+	initOption3Value: "C01",
 
 	/**
 	 * @private
@@ -185,14 +203,14 @@ Ext.define('PSO2.ResultPanel', {
 	 * @property {String} sameBonusText
 	 * 同一ボーナス用ボタンのテキスト
 	 */
-	sameBonusText: '同一',
+	sameBonusText: "同名",
 
 	/**
 	 * @private {Array} sameBonusBoost
 	 * 同一数による同一ボーナスのブースト値
 	 * 1個 = 1, 2個 = 1.1, 3個以上 = 1.15
 	 */
-	sameBonusBoost: [1.0, 1.1, 1.15],
+	sameBonusBoost: [1, 1.1, 1.15],
 
 	/**
 	 * @private {Function} calcSameBonus
@@ -204,10 +222,7 @@ Ext.define('PSO2.ResultPanel', {
 	calcSameBonus: function(v, s) {
 		var me = this;
 
-		if (v['name'].indexOf("リターナー") < 0) {
-			return Math.min(parseInt(v['success'] * me.sameBonusBoost[PSO2.utils.overflow(me.sameBonusBoost.length, s + 1, 1)]), 100);
-		}
-		return v['success'];
+		return Math.min(parseInt(v.success * me.sameBonusBoost[PSO2.utils.overflow(me.sameBonusBoost.length, s + 1, 1)]), 100)
 	},
 
 	/**
@@ -222,6 +237,16 @@ Ext.define('PSO2.ResultPanel', {
 			abilityComponent: me.abilityComponent,
 			abilityStore: me.abilityComponent.getAbilityStore()
 		});
+
+		if (me.supportData) {
+			me.optionStore1.loadData(me.supportData)
+		}
+		if (me.additionalData) {
+			me.optionStore2.loadData(me.additionalData)
+		}
+		if (me.potentialData) {
+			me.optionStore3.loadData(me.potentialData)
+		}
 
 		/* イベントの追加*/
 		this.addEvents(
@@ -240,6 +265,7 @@ Ext.define('PSO2.ResultPanel', {
 			 * @param {Boolean} init 初期値と同じ場合はTrueがセットされる
 			 */
 			'opt2change',
+			'opt3change',
 
 			/**
 			 * @event dodochange
@@ -279,7 +305,8 @@ Ext.define('PSO2.ResultPanel', {
 			idIndex: 0,
 			fields: [
 				{name: 'name', type: 'string'},
-				{name: 'success', type: 'numeric'}
+				{name: 'success', type: 'numeric'},
+				{name: "dom", type: "numeric"}
 			]
 		});
 
@@ -303,60 +330,21 @@ Ext.define('PSO2.ResultPanel', {
 		});
 
 		/* 能力追加オプション1コンボボックスの生成 */
-		me.selOpt1 = Ext.create('Ext.form.field.ComboBox', {
-			id: me.id + me.constSelOption1,
-			store: me.optionStore1,
-			displayField: 'name',
-			forceSelection: true,
-			editable: false,
-			queryMode: 'local',
-			valueField: 'value',
-			value: me.initOption1Value,
-			typeAhead: true,
-			anchor: '100%',
-			disabled: true,
-			listeners: {
-				scope: me,
-				change: function(item) {
-					var me = this;
-
-					/* 情報を更新後、イベントを発行 */
-					me.refresh();
-					me.fireEvent('opt1change', me, item, item.originalValue == item.value);
-				}
-			}
-		});
-
+		me.selOpt1 = me.createComboBox(me.constSelOption1, me.optionStore1, me.initOption1Value,
+			"opt1change");
 		/* 能力追加オプション2コンボボックスの生成 */
-		me.selOpt2 = Ext.create('Ext.form.field.ComboBox', {
-			id: me.id + me.constSelOption2,
-			store: me.optionStore2,
-			displayField: 'name',
-			forceSelection: true,
-			editable: false,
-			queryMode: 'local',
-			valueField: 'value',
-			value: me.initOption2Value,
-			typeAhead: true,
-			anchor: '100%',
-			disabled: true,
-			listeners: {
-				scope: me,
-				change: function(item) {
-					var me = this;
-
-					if (item.value == null || item.originalValue == item.value) {
-						me.optionItems = [];
-					} else {
-						me.optionItems = [me.getSelectOptionRecord(item)];
-					}
-
-					/* 情報を更新後、イベントを発行 */
-					me.refresh();
-					me.fireEvent('opt2change', me, item, item.originalValue == item.value);
+		me.selOpt2 = me.createComboBox(me.constSelOption2, me.optionStore2, me.initOption2Value,
+			"opt2change",
+			function(item) {
+				if (item.value == null || item.originalValue == item.value) {
+					this.optionItems = []
+				} else {
+					this.optionItems = [this.getSelectOptionRecord(item)]
 				}
-			}
-		});
+			});
+
+		me.selOpt3 = me.createComboBox(me.constSelOption3, me.optionStore3, me.initOption3Value,
+			"opt3change");
 
 		/* 同一ボーナス使用時のチェックボックス生成 */
 		var gid = me.id + me.constChkOption1;
@@ -401,7 +389,7 @@ Ext.define('PSO2.ResultPanel', {
 		me.dodoButton = Ext.create('Ext.button.Button', {
 			xtype: 'button',
 			text: me.dodoButtonText,
-			anchor: '70%',
+			anchor: '50%',
 			disabled: true,
 			scope: me,
 			handler: me.onClickDoDo
@@ -411,22 +399,60 @@ Ext.define('PSO2.ResultPanel', {
 		me.patternButton = Ext.create('Ext.button.Button', {
 			xtype: 'button',
 			text: me.monimoniButtonText,
-			anchor: '30%',
+			anchor: '25%',
 			disabled: true,
 			scope: me,
 			handler: me.onClickPattern
 		});
+		me.pattern2Button = Ext.create("Ext.button.Button", {
+			xtype: "button",
+			text: me.ngsButtonText,
+			anchor: "25%",
+			disabled: true,
+			scope: me,
+			handler: me.onClickPattern2
+		});
 
 		/* 子ノードの設定 */
-		me.items = [me.viewPanel, me.selOpt1, me.selOpt2, me.chkOpt1, me.successPanel, me.dodoButton, me.patternButton];
+		me.items = [me.viewPanel, me.selOpt1, me.selOpt2, me.selOpt3, me.chkOpt1, me.successPanel, me.dodoButton, me.patternButton, me.pattern2Button];
 
 		/* コード値の頭1文字目によるアイテムの参照指定 */
 		me.prefixOptions = me.prefixOptions || {};
 		me.prefixOptions[me.initOption1Value.charAt(0)] = me.selOpt1;
 		me.prefixOptions[me.initOption2Value.charAt(0)] = me.selOpt2;
+		me.prefixOptions[me.initOption3Value.charAt(0)] = me.selOpt3;
 
 		/* call parent */
 		me.callParent(arguments);
+	},
+
+	createComboBox: function(f, b, d, a, c) {
+		var e = this;
+		return Ext.create("Ext.form.field.ComboBox", {
+			id: e.id + f,
+			store: b,
+			displayField: "id",
+			forceSelection: true,
+			editable: false,
+			queryMode: "local",
+			valueField: "value",
+			value: d,
+			typeAhead: true,
+			anchor: "100%",
+			disabled: true,
+			listeners: {
+				scope: e,
+				change: function(h, g) {
+					if (Ext.isFunction(c)) {
+						c.call(this, h)
+					}
+					if (g !== true) {
+						this.refresh();
+						this.fireEvent(a, this, h, h.originalValue == h.value)
+					}
+				}
+			}
+		})
 	},
 
 	/**
@@ -474,19 +500,29 @@ Ext.define('PSO2.ResultPanel', {
 	refresh: function() {
 		var me = this, vp = me.viewPanel, sp = me.successPanel,
 			boostFn = evalStringToAny(me.getSelectOptionRecord(me.selOpt1).get('fn')),
+			a = evalStringToAny(me.getSelectOptionRecord(me.selOpt3).get("fn")),
 			sames = me.chkOpt1.getSameCount(), i, success = 100, ss = [], sss;
 
 		/* 結果パネルの更新 */
 		me.successStore.loadData(ss);
+		me.successItems = me.abilityComponent.getSuccessList(me.abilitySet, me.resultItems,
+			me.optionItems);
 
 		/* 成功率の取得 */
 		me.successItems = me.abilityComponent.getSuccessList(me.abilitySet, me.resultItems, me.optionItems);
 		for (i = 0; i < me.successItems.length; i++) {
-			sss = boostFn(me.calcSameBonus(me.successItems[i], sames));
+			sss = me.calcSameBonus(me.successItems[i], sames);
+			sss = boostFn(sss);
+			sss = a(sss);
 			if (me.boostFunction) {
 				/* キャンペーン用ブーストファンクション */
-				sss = me.boostFunction(sss);
+				if (me.successItems[i]["dom"]) {
+					sss = me.boostFunction(sss, me.successItems[i]["dom"])
+				} else {
+					sss = me.boostFunction(sss)
+				}
 			}
+			sss = Math.min(sss + me.abilitySet.isRensei(), 100);
 			ss.push([me.successItems[i]['name'], sss]);
 
 			success *= sss;
@@ -526,7 +562,7 @@ Ext.define('PSO2.ResultPanel', {
 /*
 		return (0 < me.abilitySet.enableCheckMax && (me.abilitySet.enableCheckMax - 1) <= me.abilityCount());
 */
-		return (0 < me.abilitySet.enableCheckMax && 1 <= me.abilityCount());
+		return (0 < me.abilitySet.enableMaterialMaxCount() && 1 <= me.abilityCount())
 	},
 
 	/**
@@ -536,16 +572,17 @@ Ext.define('PSO2.ResultPanel', {
 	 */
 	enableDoDoButton: function() {
 		var me = this, button = me.dodoButton, b2 = me.patternButton,
+			n = me.pattern2Button,
 			state = button.isDisabled();
 
 		if (me.isDodo()) {
-			button.enable();b2.enable();
+			button.enable();b2.enable();n.enable();
 			if (state) {
 				// call event
 				me.fireEvent('dodochange', me, true, false);
 			}
 		} else {
-			button.disable();b2.disable();
+			button.disable();b2.disable();n.disable();
 			if (!state) {
 				// call event
 				me.fireEvent('dodochange', me, false, true);
@@ -573,13 +610,16 @@ Ext.define('PSO2.ResultPanel', {
 		/* 能力追加成功率 */
 		if (0 < me.abilityCount()) {
 			me.selOpt1.enable();
+			me.selOpt3.enable()
 		} else {
 			me.selOpt1.select(me.optionStore1.getAt(0));
 			me.selOpt1.disable();
+			me.selOpt3.select(me.optionStore3.getAt(0));
+			me.selOpt3.disable()
 		}
 
 		/* 特殊能力追加 */
-		if (me.resultItems.length < me.abilitySet.enableCheckMax) {
+		if (me.resultItems.length < me.abilitySet.enableMaterialMaxCount()) {
 			me.selOpt2.enable();
 		} else {
 			me.selOpt2.disable();
@@ -616,23 +656,37 @@ Ext.define('PSO2.ResultPanel', {
 		me.removeAll();
 
 		/* 成功率を取得する */
-		me.abilitySet.forEach(function(ability) {
-			stack.push(ability);
+		me.abilitySet.forEach(function(ability, e) {
+			if (e !== true) {
+				stack.push(ability);
+			}
 		}, me);
 		success = me.abilityComponent.getSuccessList2(me.abilitySet, stack);
 
 		/* チェックボックスを追加していく */
 		/* my method */
-		me.abilitySet.forEach(function(ability) {
-			if (success[ability['code']]) {
+		me.abilitySet.forEach(function(ability, e) {
+			if (e) {
 				fs.add({
-					fieldStyle: 'float:left',
-					boxLabel: '<p style="float:left;padding-left:3px">' + ability['name'] + '</p><p style="float:right;padding-right:3px">' + success[ability['code']] + '%</p>',
-					inputValue: ability['code'],
+					fieldStyle: "float:left",
+					boxLabel: '<p class="x-factor-icon" style="float:left;margin-left:2px;padding-left:16px">' +
+					ability.name + '</p><p style="float:right;padding-right:3px">100%</p>',
+					inputValue: "*" + ability.code,
 					abilityData: ability,
 					resultPanel: me,
 					fieldSet: fs
-				});
+				})
+			} else {
+				if (success[ability['code']]) {
+					fs.add({
+						fieldStyle: 'float:left',
+						boxLabel: '<p style="float:left;padding-left:3px">' + ability['name'] + '</p><p style="float:right;padding-right:3px">' + success[ability['code']] + '%</p>',
+						inputValue: ability['code'],
+						abilityData: ability,
+						resultPanel: me,
+						fieldSet: fs
+					});
+				}
 			}
 		}, me);
 
@@ -647,6 +701,10 @@ Ext.define('PSO2.ResultPanel', {
 	 */
 	getEnableCheckMax: function() {
 		return this.abilitySet.enableCheckMax;
+	},
+
+	getEnableMaxCount: function() {
+		return this.abilitySet.enableMaterialMaxCount()
 	},
 
 	/**
@@ -674,9 +732,43 @@ Ext.define('PSO2.ResultPanel', {
 	 * @return {Boolean} 同時が不可の場合はTrueを返す
 	 */
 	isExcludePattern: function(code1, code2) {
-		var me = this, cd1 = code1.substr(0, 2), cd2 = code2.substr(0, 2);
-
-		return cd1 == cd2;
+		var m = this,
+			l = Ext.isArray(m.excludePattern) ? m.excludePattern : [m.excludePattern];
+		var g = l.length,
+			d = code1.substr(0, 1) == "*",
+			b = code2.substr(0, 1) == "*",
+			h = d ? code1.substr(1, 2) : code1.substr(0, 2),
+			f = b ? code2.substr(1, 2) : code2.substr(0, 2),
+			r = /([^\*]+)\*$/,
+			a, o = function(s, t) {
+				if (a = s.match(r)) {
+					return s.substr(0, a[1].length) == t.substr(0, a[1].length)
+				}
+				return s == t
+			};
+		if (h == f) {
+			return true
+		}
+		for (var e = 0; e < g; e++) {
+			var n = l[e],
+				k = false,
+				c;
+			n = Ext.isArray(n) ? n : [n];
+			for (c = 0; c < n.length; c++) {
+				k = o(n[c], h);
+				if (k) {
+					break
+				}
+			}
+			if (k) {
+				for (c = 0; c < n.length; c++) {
+					if (o(n[c], f)) {
+						return true
+					}
+				}
+			}
+		}
+		return false
 	},
 
 	/**
@@ -717,9 +809,10 @@ Ext.define('PSO2.ResultPanel', {
 	 * @param {Number} 現在選択されている能力追加数
 	 */
 	removeAbility: function(item, silent) {
-		var me = this;
+		var me = this,
+			b = Ext.Array.indexOf(me.resultItems, item);
 
-		me.resultItems.splice(Ext.Array.indexOf(me.resultItems, item), 1);
+		me.resultItems.splice(b, 1);
 		if (silent !== true) {
 			me.refresh();
 		}
@@ -737,16 +830,24 @@ Ext.define('PSO2.ResultPanel', {
 	doDo: function(success, fail) {
 		var me = this,
 			boostFn = evalStringToAny(me.getSelectOptionRecord(me.selOpt1).get('fn')),
+			a = evalStringToAny(me.getSelectOptionRecord(me.selOpt3).get("fn")),
 			sames = me.chkOpt1.getSameCount(), items = me.successItems,
 			len = items.length, i, sss;
 
 		if (0 < len) {
 			for (i = 0; i < len; i++) {
-				sss = boostFn(me.calcSameBonus(items[i], sames));
+				sss = me.calcSameBonus(items[i], sames);
+				sss = boostFn(sss);
+				sss = a(sss);
 				if (me.boostFunction) {
 					/* キャンペーン用ブーストファンクション */
-					sss = me.boostFunction(sss);
+					if (me.successItems[i]["dom"]) {
+						sss = me.boostFunction(sss, me.successItems[i]["dom"])
+					} else {
+						sss = me.boostFunction(sss)
+					}
 				}
+				sss = Math.min(sss + me.abilitySet.isRensei(), 100);
 
 				if (100 <= sss || Math.floor(Math.random() * 100) < sss) {
 					success.push({fieldLabel: items[i].name, name: (me.id + '-' + i), value: sss + '%'});
@@ -781,7 +882,7 @@ Ext.define('PSO2.ResultPanel', {
 	selectedOptions: function() {
 		var me = this;
 
-		return [me.selOpt1.value, me.selOpt2.value];
+		return [me.selOpt1.value, me.selOpt2.value, me.selOpt3.value];
 	},
 
 	/**
@@ -802,7 +903,7 @@ Ext.define('PSO2.ResultPanel', {
 				autoDestroy: true,
 				closable: true,
 				closeAction: 'destroy',
-				width: me.noDD === true? Ext.getBody().getWidth(): 600,
+				width: me.noDD === true ? Ext.getBody().getWidth() : Math.min(Ext.getBody().getWidth(), 600),
 				height: 148 + (success.length + fail.length) * 26,
 				modal: true,
 				successNum: s? 1: 0,
@@ -857,23 +958,47 @@ Ext.define('PSO2.ResultPanel', {
 						text: me.redodoButtonText,
 						scope: me,
 						handler: function () {
-							var me = this,
-								success = [], fail = [],
-								fs = me.win.query('fieldset'),
-								ft = me.win.query('toolbar')[0].query('label');
+							var success = [], fail = [],
+								fs = this.win.query('fieldset'),
+								ft = this.win.query('toolbar')[0].query('label');
 
-							if (me.doDo(success, fail)) {
-								me.win.successNum++;
+							if (this.doDo(success, fail)) {
+								this.win.successNum++;
 							} else {
-								me.win.failNum++;
+								this.win.failNum++;
 							}
 							fs[0].removeAll();
 							fs[0].add(success);
 							fs[1].removeAll();
 							fs[1].add(fail);
-							ft[0].update(me.getTotalSuccess(me.win.successNum, me.win.failNum));
+							ft[0].update(this.getTotalSuccess(this.win.successNum, this.win.failNum));
 						},
-						minWidth: 105
+						minWidth: 64
+					}), Ext.create("Ext.button.Button", {
+						text: me.moreButtonText,
+						scope: me,
+						handler: function() {
+							var h = [],
+								f = [],
+								e = this.win.query("fieldset"),
+								k = this.win.query("toolbar")[0].query("label"),
+								g = this.moreDodoLimit;
+							while (!this.doDo(h, f) && g--) {
+								this.win.failNum++;
+								h = [];
+								f = []
+							}
+							if (f.length == 0) {
+								this.win.successNum++
+							}
+							e[0].removeAll();
+							e[0].add(h);
+							e[1].removeAll();
+							e[1].add(f);
+							k[0].update(this.getTotalSuccess(this.win.successNum, this.win
+								.failNum))
+						},
+						minWidth: 64
 					}), Ext.create('Ext.button.Button', {
 						text: '閉じる',
 						scope: me,
@@ -883,7 +1008,7 @@ Ext.define('PSO2.ResultPanel', {
 							delete this.win;
 							this.win = null;
 						},
-						minWidth: 105
+						minWidth: 64
 					})]
 				}]
 			}).show();
@@ -946,18 +1071,160 @@ Ext.define('PSO2.ResultPanel', {
 	 */
 	addAbilityParameter: function(p, name, value) {
 		var me = this;
-
-		if (name == 'ALL') {
-			for (var i = 0; i < me.allUp.length; i++) {
-				me.addAbilityParameter(p, me.allUp[i], value);
+		if (name == "ALL") {
+			for (var b = 0; b < me.allUp.length; b++) {
+				me.addAbilityParameter(p, me.allUp[b], value)
 			}
 		} else if (name == "全属性耐性") {
-			for (var i = 0; i < me.resistAll.length; i++) {
-				me.addAbilityParameter(p, me.resistAll[i], value);
+			for (var b = 0; b < me.resistAll.length; b++) {
+				me.addAbilityParameter(p, me.resistAll[b], value)
+			}
+		} else if (name == "打射法撃力") {
+			for (var b = 0; b < me.atkAll.length; b++) {
+				me.addAbilityParameter(p, me.atkAll[b], value)
+			}
+		} else if (name == "打射法撃防御") {
+			for (var b = 0; b < me.defAll.length; b++) {
+				me.addAbilityParameter(p, me.defAll[b], value)
 			}
 		} else {
-			if (!p[name]) p[name] = 0;
-			p[name] += value;
+			if (!p[name]) {
+				p[name] = 0
+			}
+			p[name] += value
+		}
+	},
+
+	onClickPattern2: function() {
+		var d = this;
+		if (0 < d.items.length) {
+			var c = d.successItems,
+				e = [];
+			e.push(d.getSpecInfo2(c));
+			e.push(d.changengs(c));
+			d.win = Ext.create("widget.window", {
+				title: "レガロ",
+				autoDestroy: true,
+				closable: true,
+				closeAction: "destroy",
+				width: d.noDD === true ? Ext.getBody().getWidth() : 800,
+				autoHeight: true,
+				modal: true,
+				layout: "fit",
+				bodyStyle: "padding: 5px;",
+				items: Ext.createWidget("tabpanel", {
+					activeTab: 0,
+					defaults: {
+						bodyPadding: 5
+					},
+					items: e
+				}),
+				dockedItems: [{
+					xtype: "toolbar",
+					ui: "footer",
+					dock: "bottom",
+					items: ["->", Ext.create("Ext.button.Button", {
+						text: "閉じる",
+						scope: d,
+						handler: function() {
+							if (this.win) {
+								this.win.close()
+							}
+							delete this.win;
+							this.win = null
+						},
+						minWidth: 105
+					})]
+				}]
+			}).show()
+		}
+	},
+	getSpecInfo2: function(l) {
+		var m = this,
+			b = m.abilitySet.abilityStore,
+			o, d, h, a = {},
+			k = [],
+			n = new RegExp("([^\\(]+)\\(([\\+\\-]\\d+)\\)"),
+			g = l.length,
+			f = "",
+			c;
+		for (c = 0; c < g; c++) {
+			o = b.findRecord("name", l[c].name) || m.optionStore2.findRecord("name",
+				l[c].name);
+			d = o.get("effectngs").replace(/<br>/g, "").split(",");
+			for (j = 0; j < d.length; j++) {
+				h = d[j].match(n);
+				if (h && h.length == 3) {
+					m.addAbilityParameter(a, h[1], parseInt(h[2]))
+				} else {
+					if (h === null) {
+						k.push(d[j])
+					}
+				}
+			}
+		}
+		for (c = 0; c < m.abText.length; c++) {
+			if (a[m.abText[c]]) {
+				if (a[m.abText[c]] < 0) {
+					f += "<div>" + m.abText[c] +
+						'<span style="color:blue;font-weight:bold">&nbsp;&nbsp;(' + a[m.abText[
+							c]] + ")</span></div>"
+				} else {
+					f += "<div>" + m.abText[c] +
+						'<span style="color:red;font-weight:bold">&nbsp;&nbsp;(+' + a[m.abText[
+							c]] + ")</span></div>"
+				}
+			}
+		}
+
+		for (c = 0; c < k.length; c++) {
+			f += "<div>" + k[c] + "</div>"
+		}
+		return {
+			title: "性能",
+			html: f
+		}
+	},
+
+
+	changengs: function(l) {
+
+		var m = this,
+			b = m.abilitySet.abilityStore,
+			o, d, d2, h, a, k1 = [],
+			k2 = [],
+			k3 = [],
+			g = l.length,
+			c, html;
+		for (c = 0; c < g; c++) {
+			o = b.findRecord("name", l[c].name) || m.optionStore2.findRecord("name",
+				l[c].name);
+			d = o.get("effectngs");
+			d2 = o.get("namengs");
+			k1.push(l[c]["name"])
+			k2.push(d2)
+			k3.push(d)
+		}
+
+
+		/* ヘッダ */
+		html = '<table id="psn"><tr>';
+		html += '<td id="psh" style="width:20%">' + "PSO2" + '</td>';
+		html += '<td id="psh" style="width:20%">' + "NGS" + '</td>';
+		html += '<td id="psh" style="width:60%">' + "効果" + '</td>';
+		html += '</tr>';
+		/* グラフ用データの作成 */
+		for (c = 0; c < g; c++) {
+			html += '<tr>';
+			html += '<td style="width:20%">' + k1[c] + '</td>';
+			html += '<td style="width:20%">' + k2[c] + '</td>';
+			html += '<td style="width:60%">' + k3[c] + '</td>';
+			html += '</tr>';
+		}
+		html += '</table>';
+		return {
+			title: "変換",
+			html: html
 		}
 	},
 
@@ -966,180 +1233,347 @@ Ext.define('PSO2.ResultPanel', {
 	 * パターンボタンクリック時に呼び出されるイベント処理
 	 */
 	onClickPattern: function() {
-		var me = this;
-
-		if (0 < me.items.length) {
-			var items = me.successItems,
-				len = items.length, i, j, success = [], sss, rec,
-				opt = me.selOpt1.store, cnt = opt.count(), sames = me.chkOpt1.getSameCount(),
-				html, winItems = [], as = me.abilitySet.abilityStore, ab, lst, e, param = {},
-				re = new RegExp("([^\\(]+)\\(\\+(\\d+)\\)"), ppp = [];
-
-			/* 能力パラメータ */
-			for (i = 0; i < len; i++) {
-				ab = as.findRecord('name', items[i].name) || me.optionStore2.findRecord('name', items[i].name);
-				lst = ab.get('effect').replace(/<br>/g,'').split(',');
-				for (j = 0; j < lst.length; j++) {
-					e = lst[j].match(re);
-					if (e && e.length == 3) {
-						me.addAbilityParameter(param, e[1], parseInt(e[2]));
-					}
-				}
-			}
-			html = '';
-			for (i = 0; i < me.abText.length; i++) {
-				if (param[me.abText[i]]) {
-					html += '<div>' + me.abText[i] + '<span style="color:red;font-weight:bold">&nbsp;&nbsp;(+' + param[me.abText[i]] + ')</span></div>';
-				}
-			}
-			winItems.push({
-				title: '性能',
-				html: html
-			});
-
-			/* 成功率パターン表 */
-			for (i = 0; i < len; i++) {
-				sss = me.calcSameBonus(items[i], sames);
-				if (me.boostFunction) {
-					/* キャンペーン用ブーストファンクション */
-					sss = me.boostFunction(sss);
-				}
-				success.push(sss);
-			}
-
-			/* ヘッダ */
-			html = '<table id="ps"><tr><td id="psh"></td>';
-			for (j = 0; j < cnt; j++) {
-				rec = opt.getAt(j);
-				html += '<td id="psh" style="width:' + parseInt(88 / cnt) +'%">' + rec.get('sname') + '</td>';
-			}
-			html += '</tr>';
-
-			/* グラフ用データの作成 */
-			var patternData = [], vname, fields = [];
-			for (i = 0; i <= len; i++) {
-				/* スロット毎の確率 */
-				if (i == 0) vname = '成功';
-				else if (i == len) vname = '全落ち';
-				else vname = i + 'スロ落ち';
-				html += '<tr><td id="ps">' + vname + '</td>';
-				fields.push(vname);
-				for (j = 0; j < cnt; j++) {
-					/* ヘッダ毎の確率 */
-					var p = me.getSuccessPattern(i, success, evalStringToAny(opt.getAt(j).get('fn')));
-
-					html += '<td';
-					if (p == 1) html += ' id="bold"';
-					else if (0.8 < p) html += ' id="high"';
-					else if (p < 0.1) html += ' id="low"';
-					html += '>' + Ext.util.Format.number(p * 100, '0.000')  + '%</td>';
-
-					patternData[j] = patternData[j] || {};
-					if (i == 0) {
-						/* 初回だけ名前を設定 */
-						patternData[j]['name'] = opt.getAt(j).get('sname');
-					}
-					patternData[j][vname] = p * 100;
-				}
-				html += '</tr>';
-			}
-			html += '</table>';
-
-			/* テーブルの追加 */
-			winItems.push({
-				title: '成功率パターン',
-				html: html
-			});
-
-			/* グラフの追加 */
-			var browserStore = Ext.create('Ext.data.JsonStore', {
-				fields: fields,
-				data: patternData
-			});
-			winItems.push({
-				xtype: 'chart',
-				title: '成功率グラフ',
-				height: 160 + 24 * len,
-				style: 'background:#fff',
-				animate: true,
-				theme: 'Browser:gradients',
-				defaultInsets: 30,
-				store: browserStore,
-				legend: {
-					position: 'right'
-				},
-				axes: [{
-					type: 'Numeric',
-					position: 'left',
-					fields: fields,
-					title: 'Lost %',
-					grid: true,
-					decimals: 0,
-					minimum: 0,
-					maximum: 100
-				}, {
-					type: 'Category',
-					position: 'bottom',
-					fields: ['name'],
-					title: 'Usage'
-				}],
-				series: [{
-					type: 'area',
-					axis: 'left',
-					highlight: true,
-					tips: {
-						trackMouse: true,
-						width: 170,
-						height: 28,
-						renderer: function(storeItem, item) {
-							this.setTitle(item.storeField + ' - ' + Ext.util.Format.number(storeItem.get(item.storeField), '0.000') + '%');
-						}
-					},
-					xField: 'name',
-					yField: fields,
-					style: {
-						lineWidth: 1,
-						stroke: '#666',
-						opacity: 0.86
-					}
-				}]
-			});
-
-			/* パターンウィンドウを表示 */
-			me.win = Ext.create('widget.window', {
-				title: 'モニタですぅ～',
+		var d = this;
+		if (0 < d.items.length) {
+			var c = d.successItems,
+				e = [],
+				b = [],
+				a = [];
+			e.push(d.getSpecInfo(c));
+			e.push(d.getSuccessTable(c, b, a));
+			e.push(d.getSuccessGraph(c, b, a));
+			e.push(d.getOrderView(c));
+			d.win = Ext.create("widget.window", {
+				title: "モニタですぅ～",
 				autoDestroy: true,
 				closable: true,
-				closeAction: 'destroy',
-				width: me.noDD === true? Ext.getBody().getWidth(): 600,
+				closeAction: "destroy",
+				width: d.noDD === true ? Ext.getBody().getWidth() : 600,
 				autoHeight: true,
 				modal: true,
-				layout: 'fit',
-				bodyStyle: 'padding: 5px;',
-				items: Ext.createWidget('tabpanel', {
+				layout: "fit",
+				bodyStyle: "padding: 5px;",
+				items: Ext.createWidget("tabpanel", {
 					activeTab: 0,
-					defaults :{
+					defaults: {
 						bodyPadding: 5
 					},
-					items: winItems
+					items: e
 				}),
 				dockedItems: [{
-					xtype: 'toolbar',
-					ui: 'footer',
-					dock: 'bottom',
-					items: ['->', Ext.create('Ext.button.Button', {
-						text: '閉じる',
-						scope: me,
+					xtype: "toolbar",
+					ui: "footer",
+					dock: "bottom",
+					items: ["->", Ext.create("Ext.button.Button", {
+						text: "閉じる",
+						scope: d,
 						handler: function() {
-							if (this.win)
-								this.win.close();
+							if (this.win) {
+								this.win.close()
+							}
 							delete this.win;
-							this.win = null;
+							this.win = null
 						},
 						minWidth: 105
 					})]
 				}]
-			}).show();
+			}).show()
+		}
+	},
+
+	getSpecInfo: function(l) {
+		var m = this,
+			b = m.abilitySet.abilityStore,
+			o, d, h, a = {},
+			k = [],
+			n = new RegExp("([^\\(]+)\\(([\\+\\-]\\d+)\\)"),
+			g = l.length,
+			f = "",
+			c;
+		for (c = 0; c < g; c++) {
+			o = b.findRecord("name", l[c].name) || m.optionStore2.findRecord("name",
+				l[c].name);
+			d = o.get("effect").replace(/<br>/g, "").split(",");
+			for (j = 0; j < d.length; j++) {
+				h = d[j].match(n);
+				if (h && h.length == 3) {
+					m.addAbilityParameter(a, h[1], parseInt(h[2]))
+				} else {
+					if (h === null) {
+						k.push(d[j])
+					}
+				}
+			}
+		}
+		for (c = 0; c < m.abText.length; c++) {
+			if (a[m.abText[c]]) {
+				if (a[m.abText[c]] < 0) {
+					f += "<div>" + m.abText[c] +
+						'<span style="color:blue;font-weight:bold">&nbsp;&nbsp;(' + a[m.abText[
+							c]] + ")</span></div>"
+				} else {
+					f += "<div>" + m.abText[c] +
+						'<span style="color:red;font-weight:bold">&nbsp;&nbsp;(+' + a[m.abText[
+							c]] + ")</span></div>"
+				}
+			}
+		}
+		for (c = 0; c < k.length; c++) {
+			f += "<div>" + k[c] + "</div>"
+		}
+		return {
+			title: "性能",
+			html: f
+		}
+	},
+	getSuccessTable: function(h, o, f) {
+		var k = this,
+			n = [],
+			l = evalStringToAny(k.getSelectOptionRecord(k.selOpt3).get("fn")),
+			g = h.length,
+			b = k.selOpt1.store,
+			c = b.count(),
+			q, d;
+		for (d = 0; d < g; d++) {
+			q = k.calcSameBonus(h[d], k.chkOpt1.getSameCount());
+			q = Math.min(q + k.abilitySet.isRensei(), 100);
+			q = l(q);
+			if (k.boostFunction) {
+				if (k.successItems[d]["dom"]) {
+					q = k.boostFunction(q, k.successItems[d]["dom"])
+				} else {
+					q = k.boostFunction(q)
+				}
+			}
+			n.push(q)
+		}
+		var e = '<table id="ps"><tr><td id="psh"></td>';
+		for (d = 0; d < c; d++) {
+			rec = b.getAt(d);
+			e += '<td id="psh" style="width:' + parseInt(88 / c) + '%">' + rec.get(
+				"name") + "</td>"
+		}
+		e += "</tr>";
+		var m;
+		for (d = 0; d <= g; d++) {
+			if (d == 0) {
+				m = "成功"
+			} else {
+				if (d == g) {
+					m = "全落ち"
+				} else {
+					m = d + "スロ落ち"
+				}
+			}
+			e += '<tr><td id="ps">' + m + "</td>";
+			f.push(m);
+			for (j = 0; j < c; j++) {
+				var a = k.getSuccessPattern(d, n, evalStringToAny(b.getAt(j).get("fn")));
+				e += "<td";
+				if (a == 1) {
+					e += ' id="bold"'
+				} else {
+					if (0.8 < a) {
+						e += ' id="high"'
+					} else {
+						if (a < 0.1) {
+							e += ' id="low"'
+						}
+					}
+				}
+				e += ">" + Ext.util.Format.number(a * 100, "0.000") + "%</td>";
+				o[j] = o[j] || {};
+				if (d == 0) {
+					o[j]["name"] = b.getAt(j).get("name")
+				}
+				o[j][m] = a * 100
+			}
+			e += "</tr>"
+		}
+		e += "</table>";
+		return {
+			title: "成功率パターン",
+			html: e
+		}
+	},
+	getSuccessGraph: function(d, c, b) {
+		var a = d.length;
+		return {
+			xtype: "chart",
+			title: "成功率グラフ",
+			height: 160 + 24 * a,
+			style: "background:#fff",
+			animate: true,
+			theme: "Browser:gradients",
+			defaultInsets: 30,
+			store: Ext.create("Ext.data.JsonStore", {
+				fields: b,
+				data: c
+			}),
+			legend: {
+				position: "right"
+			},
+			axes: [{
+				type: "Numeric",
+				position: "left",
+				fields: b,
+				title: "Lost %",
+				grid: true,
+				decimals: 0,
+				minimum: 0,
+				maximum: 100
+			}, {
+				type: "Category",
+				position: "bottom",
+				fields: ["name"],
+				title: "Usage"
+			}],
+			series: [{
+				type: "area",
+				axis: "left",
+				highlight: true,
+				tips: {
+					trackMouse: true,
+					width: 170,
+					height: 28,
+					renderer: function(f, e) {
+						this.setTitle(e.storeField + " - " + Ext.util.Format.number(f.get(
+							e.storeField), "0.000") + "%")
+					}
+				},
+				xField: "name",
+				yField: b,
+				style: {
+					lineWidth: 1,
+					stroke: "#666",
+					opacity: 0.86
+				}
+			}]
+		}
+	},
+	getOrderView: function(d) {
+		var f = this,
+			c = d.length,
+			b = [],
+			a, e;
+		for (e = 0; e < c; e++) {
+			b.push({
+				html: d[e]["name"]
+			})
+		}
+		a = Ext.create("Ext.form.FieldSet", {
+			frame: true,
+			title: "特殊能力",
+			margins: "0",
+			width: "100%",
+			layout: "column",
+			autoHeight: true,
+			defaults: {
+				columnWidth: 0.5,
+				border: 0,
+				margin: "5 0 10 0",
+				cls: "x-order-ability"
+			},
+			viewLimit: -1,
+			viewAbility: false,
+			stackAbility: [],
+			capacityOver: false,
+			items: b,
+			getCount: function() {
+				return this.items.length + this.stackAbility.length
+			}
+		});
+		return {
+			xtype: "panel",
+			title: "並び順",
+			layout: "column",
+			items: [{
+				xtype: "checkbox",
+				boxLabel: "潜在／時限",
+				fs: a,
+				listeners: {
+					scope: f,
+					change: function(k, h, g, l) {
+						a.viewAbility = h;
+						f.updateOrderView(a, h != g)
+					}
+				}
+			}, Ext.create("Ext.form.field.ComboBox", {
+				fs: a,
+				style: "marginLeft: 15px",
+				store: Ext.create("Ext.data.ArrayStore", {
+					autoDestroy: true,
+					fields: [{
+						name: "id",
+						type: "numeric"
+					}, {
+						name: "name",
+						type: "string"
+					}],
+					data: [
+						[-1, "通常"],
+						[6, "6スロ"],
+						[8, "8スロ"]
+					]
+				}),
+				displayField: "name",
+				forceSelection: true,
+				editable: false,
+				queryMode: "local",
+				valueField: "id",
+				value: a.viewLimit,
+				typeAhead: true,
+				anchor: "100%",
+				listeners: {
+					scope: f,
+					change: function(k, h, g, l) {
+						a.viewLimit = h;
+						f.updateOrderView(a, false)
+					}
+				}
+			}), a]
+		}
+	},
+	updateOrderView: function(c, e) {
+		var b = c.getCount();
+		if (e) {
+			if (c.viewAbility) {
+				c.insert(0, {
+					html: "潜在／時限",
+					cls: "x-order-with-ability"
+				})
+			} else {
+				c.remove(c.items.getAt(0))
+			}
+		}
+		if (c.capacityOver) {
+			c.remove(c.items.getAt(c.items.length - 1));
+			for (; 0 < c.stackAbility.length;) {
+				c.add(c.stackAbility.pop())
+			}
+		}
+		if (c.viewLimit != -1) {
+			if (c.viewLimit < c.getCount()) {
+				for (; c.viewLimit <= c.items.length;) {
+					var d = c.items.getAt(c.items.length - 1);
+					c.stackAbility.push({
+						html: d.el.dom.textContent
+					});
+					c.remove(d)
+				}
+			} else {
+				for (; c.items.length <= c.viewLimit && 0 < c.stackAbility.length;) {
+					c.add(c.stackAbility.pop())
+				}
+			}
+		}
+		if (0 < c.stackAbility.length) {
+			c.add({
+				html: "…他" + c.stackAbility.length + "種"
+			});
+			c.capacityOver = true
+		} else {
+			c.capacityOver = false
 		}
 	}
 });

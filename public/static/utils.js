@@ -35,7 +35,9 @@ Ext.define('PSO2.CookieModel', {
  */
 PSO2.Cookie = {
 	/** 保存期間(日) */
-	expiresDay: 90,
+	expiresDay: 30,
+	version: "1.1",
+	vText: "__version",
 
 	/**
 	 * 初期化
@@ -58,11 +60,22 @@ PSO2.Cookie = {
 		if (!Ext.isDefined(PSO2.Cookie.cookieProvider))
 			PSO2.Cookie.init();
 
-		var val = PSO2.Cookie.cookieProvider.get(key);
+		var val = PSO2.Cookie.cookieProvider.get(key),
+			a = PSO2.Cookie.cookieProvider.get(key + PSO2.Cookie.vText),
+			b = null;
 		if (Ext.isDefined(val)) {
 			val = JSON.parse(val);
 		}
-		return val;
+		if (Ext.isDefined(a)) {
+			if (a == PSO2.Cookie.version) {
+				b = val
+			}
+		} else {
+			try {
+				b = JSON.parse(val)
+			} catch (d) {}
+		}
+		return b
 	},
 
 	/**
@@ -74,12 +87,9 @@ PSO2.Cookie = {
 	set: function(key, val) {
 		if (!Ext.isDefined(PSO2.Cookie.cookieProvider))
 			PSO2.Cookie.init();
-		if (Ext.isObject(val)) {
-			// Object
-			PSO2.Cookie.cookieProvider.set(key, JSON.stringify(val));
-		} else {
-			// String
+			if (Ext.isObject(val)) {
 			PSO2.Cookie.cookieProvider.set(key, val);
+			PSO2.Cookie.cookieProvider.set(key + PSO2.Cookie.vText, PSO2.Cookie.version)
 		}
 	}
 };

@@ -122,6 +122,22 @@ If you are unsure which license is appropriate for your use, please contact the 
  *****************************************************************************/
 Ext.ns('PSO2');
 
+const HEADER_NAMES = {
+	'A': 'ステータス',
+	'A+': 'ステータス(特殊)',
+	'A++': 'フレイズ・センテンス',
+	'AB': 'S級特殊能力(武器)',
+	'AB+': 'S級特殊能力(ユニット)',
+	'B': 'カタリスト・特殊系',
+	'C': 'レセプター',
+	'D': 'ソール',
+	'D+': 'フィーバー',
+	'E': 'レジスト',
+	'E+': '状態異常付与',
+	'E++': '倍率特効',
+	'E+++': 'ブースト'
+}
+
 /* グリッドの変更チェックを行わないようオーバーライド */
 Ext.override(Ext.data.Record, {
 	isModified: function(fieldName) {
@@ -145,7 +161,20 @@ Ext.define('PSO2.TabCloseMenu', {
 	closeTabText: 'このタブを閉じる',
 	closeText: 'このタブを閉じる',
 	closeOthersTabsText: 'これ以外を閉じる',
-	closeAllTabsText: '全てのタブを閉じる'
+	closeAllTabsText: '全てのタブを閉じる',
+	onAfterLayout: function() {
+		var a = {
+			scope: this,
+			delegate: "div.x-tab"
+		};
+		a[this.menuTrigger] = function(c, d) {
+			var b = this;
+			if (b.tabBar.getChildByElement(d)) {
+				b.onContextMenu(c, d)
+			}
+		};
+		this.mon(this.tabBar.el, a)
+	}
 });
 
 /**
@@ -162,21 +191,8 @@ Ext.define('PSO2.GridGrouping', {
 		});
 	},
 	getHeaderName: function(values) {
-		if (values['name'] == 'A') {
-			return 'ステータス';
-		} else if (values['name'] == 'A+') {
-			return 'ステータス(特殊)';
-		} else if (values['name'] == 'B') {
-			return 'レジスト';
-		} else if (values['name'] == 'C') {
-			return '状態異常付与';
-		} else if (values['name'] == 'D') {
-			return 'ソール';
-		} else if (values['name'] == 'D+') {
-			return 'フィーバー';
-		} else if (values['name'] == 'E') {
-			return '特殊';
-		}
+		const value = values['name']
+		if (value && HEADER_NAMES[value]) return HEADER_NAMES[value]
 		return 'その他';
 	}
 });
@@ -197,7 +213,7 @@ Ext.define('PSO2.SynthesisComponent', {
 	 * @property {String} version
 	 * 当コンポーネントのバージョン
 	 */
-	version: '1.5',
+	version: '19.2',
 
 	/**
 	 * @property {String} title
@@ -227,7 +243,7 @@ Ext.define('PSO2.SynthesisComponent', {
 	 * @property {Number} maxMaterial
 	 * 素材の最大数
 	 */
-	maxMaterial: 2,
+	maxMaterial: 5,
 
 	/**
 	 * @property {Boolean} noDD
@@ -261,8 +277,7 @@ Ext.define('PSO2.SynthesisComponent', {
 	/**
 	 * お薦めレシピ(仮)のメニュー
 	 */
-	getRecommendRecipe: false,
-
+	getRecommendRecipe: true,
 	/* 以下はレシピメニューを作成する場合の例 */
 /*
 	getRecommendRecipe: function() {
@@ -289,6 +304,208 @@ Ext.define('PSO2.SynthesisComponent', {
 		}];
 	},
 */
+
+	getRecommendRecipe: function() {
+		var me = this;
+		return [{
+			text: 'アストラル',
+			menu: [{
+				text: 'アストラル・ソール',
+				scope: me,
+				handler: function() {
+					this.selectLoadData(null, {
+						s: 'RZ01.ZA01.ZB01.ZC01.ZD01',
+						1: 'ZA01.ZB01.ZC01.ZD01.ZH01',
+						2: 'VJ01.ZA01.ZB01.ZC01.ZD01',
+						3: 'VJ01.ZA01.ZB01.ZC01.ZE01',
+						4: 'VJ01.ZA01.ZB01.ZC01.ZF01',
+						5: 'VJ01.ZA01.ZB01.ZC01.ZG01',
+						r: '',
+						o: ''
+					});
+				}
+			}, {
+				text: 'ソール・カタリスト',
+				scope: me,
+				handler: function() {
+					this.selectLoadData(null, {
+						s: 'RC23.ZA01.ZB01.ZC01.ZD01',
+						1: 'RP55.ZA01.ZB01.ZC01.ZD01',
+						2: 'ROC2.ZA01.ZB01.ZC01.ZE01',
+						3: 'RQ01.ZA01.ZB01.ZC01.ZF01',
+						4: 'RI22.ZA01.ZB01.ZC01.ZG01',
+						5: 'ZA01.ZB01.ZC01.ZD01.ZH01',
+						r: '',
+						o: ''
+					});
+				}
+			}]
+		}, {
+			text: 'ファクター',
+			menu: [{
+				text: 'エーテル・ファクター',
+				scope: me,
+				handler: function() {
+					this.selectLoadData(null, {
+						s: 'SB01.ZA01.ZB01.ZC01.ZD01',
+						1: 'ZA01.ZB01.ZC01.ZD01.ZH01',
+						2: 'VJ02.ZA01.ZB01.ZC01.ZD01',
+						3: 'VJ02.ZA01.ZB01.ZC01.ZE01',
+						4: 'VJ02.ZA01.ZB01.ZC01.ZF01',
+						5: 'VJ02.ZA01.ZB01.ZC01.ZG01',
+						r: '',
+						o: ''
+					});
+				}
+			}, {
+				text: 'ファクター・カタリスト',
+				scope: me,
+				handler: function() {
+					this.selectLoadData(null, {
+						s: 'TG01.ZA01.ZB01.ZC01.ZD01',
+						1: 'TG02.ZA01.ZB01.ZC01.ZD01',
+						2: 'TG03.ZA01.ZB01.ZC01.ZE01',
+						3: 'ZA01.ZB01.ZC01.ZD01.ZF01',
+						4: 'ZA01.ZB01.ZC01.ZD01.ZG01',
+						5: 'ZA01.ZB01.ZC01.ZD01.ZH01',
+						r: '',
+						o: ''
+					});
+				}
+			}, {
+				text: 'エーテル・ソール',
+				scope: me,
+				handler: function() {
+					this.selectLoadData(null, {
+						s: 'SC01.ZA01.ZB01.ZC01.ZD01',
+						1: 'SC03.ZA01.ZB01.ZC01.ZD01',
+						2: 'ZA01.ZB01.ZC01.ZD01.ZE01',
+						3: 'ZA01.ZB01.ZC01.ZD01.ZF01',
+						4: 'ZA01.ZB01.ZC01.ZD01.ZG01',
+						5: 'ZA01.ZB01.ZC01.ZD01.ZH01',
+						r: '',
+						o: ''
+					});
+				}
+			}]
+		}, {
+			text: 'レヴリー',
+			menu: [{
+				text: 'マナ・レヴリー',
+				scope: me,
+				handler: function() {
+					this.selectLoadData(null, {
+						s: 'ZA01.ZB01.ZC01.ZD01.ZE01',
+						1: 'ZA01.ZB01.ZC01.ZD01.ZH01',
+						2: 'VJ03.TL01.ZB01.ZC01.ZD01',
+						3: 'VJ03.ZA01.ZB01.ZC01.ZE01',
+						4: 'VJ03.ZA01.ZB01.ZC01.ZF01',
+						5: 'VJ03.ZA01.ZB01.ZC01.ZG01',
+						r: '',
+						o: ''
+					});
+				}
+			}, {
+				text: 'レヴリー・カタリスト',
+				scope: me,
+				handler: function() {
+					this.selectLoadData(null, {
+						s: 'TJ02.ZA01.ZB01.ZC01.ZD01',
+						1: 'TJ03.ZA01.ZB01.ZC01.ZD01',
+						2: 'TJ04.ZA01.ZB01.ZC01.ZE01',
+						3: 'TJ05.ZA01.ZB01.ZC01.ZF01',
+						4: 'TJ06.ZA01.ZB01.ZC01.ZG01',
+						5: 'ZA01.ZB01.ZC01.ZD01.ZH01',
+						r: '',
+						o: ''
+					});
+				}
+			}, {
+				text: 'オメガ・メモリア',
+				scope: me,
+				handler: function() {
+					this.selectLoadData(null, {
+						s: 'TJ01.ZA01.ZB01.ZC01.ZD01',
+						1: 'SC04.ZA01.ZB01.ZC01.ZD01',
+						2: 'SC05.ZA01.ZB01.ZC01.ZE01',
+						3: 'ZA01.ZB01.ZC01.ZD01.ZF01',
+						4: 'ZA01.ZB01.ZC01.ZD01.ZG01',
+						5: 'ZA01.ZB01.ZC01.ZD01.ZH01',
+						r: '',
+						o: ''
+					});
+				}
+			}]
+		}, {
+			text: '複合',
+			menu: [{
+				text: 'アスエテマナリタ',
+				scope: me,
+				handler: function() {
+					this.selectLoadData(null, {
+						s: 'VJ03.TL01.VN01',
+						1: 'SA01.TG10.ZA01',
+						2: 'VJ03.TE04.ZA01',
+						3: 'VJ03.TE04.ZA01',
+						4: 'VJ03.TE04.ZA01',
+						5: 'XA01.XF01.ZB01',
+						r: 'SA01.TG10.TJ10.TE05',
+						o: ''
+					});
+				}
+			}, {
+				text: 'アスエテマナクラ',
+				scope: me,
+				handler: function() {
+					this.selectLoadData(null, {
+						s: 'VJ03.TL01.VN01',
+						1: 'SA01.TG10.ZA01',
+						2: 'VJ03.TM04.ZA01',
+						3: 'VJ03.TM04.ZA01',
+						4: 'VJ03.TM04.ZA01',
+						5: 'XA01.XF01.ZB01',
+						r: 'SA01.TG10.TJ10.TM05',
+						o: ''
+					});
+				}
+			}, {
+				text: 'アスエテリタクラ',
+				scope: me,
+				handler: function() {
+					this.selectLoadData(null, {
+						s: 'VN01.ZA01.ZB01',
+						1: 'SA01.TG10.ZA01',
+						2: 'TE04.TM04.ZA01',
+						3: 'TE04.TM04.ZA01',
+						4: 'TE04.TM04.ZA01',
+						5: 'XA01.XF01.ZB01',
+						r: 'SA01.TG10.TE05.TM05',
+						o: ''
+					});
+				}
+			}, {
+				text: 'アスエテマナリタクラ',
+				scope: me,
+				handler: function() {
+					this.selectLoadData(null, {
+						s: 'VJ03.TL01.VN01.ZA01',
+						1: 'SA01.TG10.ZA01.ZB01',
+						2: 'VJ03.TE04.TM04.ZA01',
+						3: 'VJ03.TE04.TM04.ZA01',
+						4: 'VJ03.TE04.TM04.ZA01',
+						5: 'XA01.XF01.ZA01.ZB01',
+						r: 'SA01.TG10.TJ10.TE05.TM05',
+						o: ''
+					});
+				}
+			}]
+		}];
+	},
+	factorMenuText: {
+		on: "因子化する",
+		off: "因子化を解除する"
+	},
+
 
 	/**
 	 * コンストラクタ
@@ -334,6 +551,7 @@ Ext.define('PSO2.SynthesisComponent', {
 			region: 'north',
 			height: 30,
 			layout: 'fit',
+			hidden: me.noDD,
 			html: [
 				'<div class="x-top-title">',
 					me.title + ' ver ' + me.version + '&nbsp;',
@@ -378,7 +596,7 @@ Ext.define('PSO2.SynthesisComponent', {
 				columns: [{
 					dataIndex: 'name',
 					header: '能力',
-					width: 108,
+					width: 136,
 					filterable: true,
 					filter: {
 						type: 'string'
@@ -386,25 +604,26 @@ Ext.define('PSO2.SynthesisComponent', {
 				}, {
 					dataIndex: 'effect',
 					header: '効果',
-					width: 144,
+					width: 157,
 					filter: {
 						type: 'string'
 					},
 					renderer: function (value, meta, record) {
 						if (record.get('extup')) {
 							var bonus = [];
-
 							Ext.Array.forEach(record.get('extup'), function(v) {
-								var ab = this.ability.findAbilityName(v.length==2? v + '01': v);
-
+								var ab = this.ability.findAbilityName(v.length == 2 ? v + "01" : v);
 								if (ab) {
-									bonus.push(v.length==2? ab.get('name').replace(/[IV]+$/, ""): ab.get('name'));
+									bonus.push(v.length == 2 ? ab.get("name").replace(/[IV]+$/, "") :
+									ab.get("name"))
 								}
 							}, me);
-
-							meta.tdAttr = 'data-qtip="' + bonus.join(",") + 'の継承・生成ボーナス"';
+							meta.tdAttr = 'data-qtip="' + bonus.join(",") + 'の継承・生成ボーナス"'
 						}
-						return value;
+						if (record.get("sopget")) {
+							meta.tdAttr = 'data-qtip="' + record.get("sopget") + '"'
+						}
+						return value
 					}
 				}],
 				features: [{
@@ -452,6 +671,9 @@ Ext.define('PSO2.SynthesisComponent', {
 								if (startRow % 2 === 0) {
 									row.className += (' ' + this.altRowCls);
 								}
+								if (rec.get("cls")) {
+									row.className += (" " + rec.get("cls"))
+								}
 							}
 						}
 					}
@@ -496,16 +718,14 @@ Ext.define('PSO2.SynthesisComponent', {
 
 							/* セルクリック時に呼び出されるイベント処理 */
 							cellclick: function(view, cell, cellIndex, record, row, rowIndex, e) {
-								var me = this;
-
 								/* 選択されいるグリッドへ特殊能力をセット */
-								if (me.selectedGridCell) {
-									me.selectedGridCell.view.getStore().addAbility(record.data);
+								if (this.selectedGridCell) {
+									this.selectedGridCell.view.getStore().addAbility(record.data);
 								}
 
 								/* ウィンドウを閉じる */
-								me.selectedGridCell = null;
-								me.abilityWindow.hide();
+								this.selectedGridCell = null;
+								this.abilityWindow.hide();
 							}
 						}
 					}
@@ -522,16 +742,27 @@ Ext.define('PSO2.SynthesisComponent', {
 				bodyPadding: 1
 			},
 			plugins: Ext.create('PSO2.TabCloseMenu', {
+				menuTrigger: (me.noDD ? "click" : "contextmenu"),
 				extraItemsTail: ['-', {
+					text: "スロットをゴミで埋める",
+					scope: me,
+					handler: function() {
+						var g = this.tabPanel.plugins[0],
+							h = this.findLocationHashBy(g.item);
+						if (0 <= h) {
+							this.tabPanel.items.getAt(h).fillDuster()
+						}
+					}
+				}, {
 					text: 'この内容を別へコピー',
 					scope: me,
 					handler: function() {
 						var me = this,
-							closeMenu = me.tabPanel.plugins[0],
-							index = me.findLocationHashBy(closeMenu.item);
+							closeMenu = this.tabPanel.plugins[0],
+							index = this.findLocationHashBy(closeMenu.item);
 
 						if (0 <= index) {
-							me.selectLoadData(null, me.locationHash[index]);
+							this.selectLoadData(null, this.locationHash[index]);
 						}
 					}
 				}],
@@ -561,7 +792,7 @@ Ext.define('PSO2.SynthesisComponent', {
 			scope: me,
 			handler: function() {
 				/* フォーカスを変更 */
-				me.tabPanel.setActiveTab(me.addTab());
+				this.tabPanel.setActiveTab(this.addTab());
 			}
 		}), Ext.create('Ext.Action', {
 			iconCls: 'x-save-icon',
@@ -584,18 +815,20 @@ Ext.define('PSO2.SynthesisComponent', {
 				enableToggle: false,
 				scope: me,
 				handler: function (item) {
-					if (!me.costPanel) {
-						me.costPanel = Ext.create('PSO2.CostPanel', {
+					if (!this.costPanel) {
+						this.costPanel = Ext.create('PSO2.CostPanel', {
 							title: 'コスト算出',
 							autoDestroy: true,
-							noDD: me.noDD,
-							tabPanel: me.tabPanel,
-							maxMaterial: me.maxMaterial
+							noDD: this.noDD,
+							tabPanel: this.tabPanel,
+							maxMaterial: this.maxMaterial,
+							supportData: this.ajaxData.optionList.support,
+							additionalData: this.ajaxData.optionList.additional
 						});
-						me.tabPanel.insert(0, me.costPanel);
-						me.tabPanel.setActiveTab(0);
+						this.tabPanel.insert(0, this.costPanel);
+						this.tabPanel.setActiveTab(0);
 					} else {
-						me.tabPanel.setActiveTab(me.costPanel);
+						this.tabPanel.setActiveTab(this.costPanel);
 /* remove
 						me.tabPanel.remove(me.costPanel, true);
 						delete me.costPanel;
@@ -616,7 +849,14 @@ Ext.define('PSO2.SynthesisComponent', {
 					data: [
 						{'T': '通常',   'V':  0, 'F': null},
 						{'T': '5% UP',  'V':  5, 'F': function(v) { return Math.min(v +  5, 100); }},
-						{'T': '10% UP', 'V': 10, 'F': function(v) { return Math.min(v + 10, 100); }}
+						{'T': '10% UP', 'V': 10, 'F': function(v) { return Math.min(v + 10, 100); }},
+						{ T: "15% UP",V: 25,F: function(g) { return Math.min(g + 15, 100) } },
+						{ T: "20% UP", V: 30, F: function(g) { return Math.min(g + 20, 100) } },
+						{ T: "打撃力系", V: 11, F: function(g, x) { if (x == 1) { g = Math.min(g + 5, 100) } return g } },
+						{ T: "射撃力系", V: 12, F: function(g, x) { if (x == 2) { g = Math.min(g + 5, 100) } return g } },
+						{ T: "法撃力系", V: 13, F: function(g, x) { if (x == 3) { g = Math.min(g + 5, 100) } return g } },
+						{ T: "HP/PP系", V: 14, F: function(g, x) { if (x == 4) { g = Math.min(g + 5, 100) } return g } },
+						{ T: "特殊系", V: 15, F: function(g, x) { if (x == 5) { g = Math.min(g + 5, 100) } return g } }
 					]
 				}),
 				displayField: 'T',
@@ -627,12 +867,14 @@ Ext.define('PSO2.SynthesisComponent', {
 				value: 0,
 				typeAhead: true,
 				width: 84,
+
 				listeners: {
+					scope: me,
 					change: function(item, newValue, oldValue) {
 						var panel = me.tabPanel.query('resultpanel'), i;
 
-						me.enableBoost = (0 < newValue);
-						me.boostFunction = item.store.findRecord('V', newValue).get('F');
+						this.enableBoost = (0 < newValue);
+						this.boostFunction = item.store.findRecord('V', newValue).get('F');
 						if (me.enableBoost) {
 							item.addCls('x-campaign-up');
 						} else {
@@ -640,7 +882,7 @@ Ext.define('PSO2.SynthesisComponent', {
 						}
 						if (Ext.isArray(panel)) {
 							for (i = 0; i < panel.length; i++) {
-								panel[i].boostFunction = me.boostFunction;
+								panel[i].boostFunction = this.boostFunction;
 								if (panel[i].rendered) {
 									panel[i].refresh();
 								}
@@ -659,9 +901,52 @@ Ext.define('PSO2.SynthesisComponent', {
 				style: {
 					overflow: 'visible'
 				},
-				text: 'レシピ例(仮)',
+				text: 'レシピ',
 				menu: me.getRecommendRecipe()
 			});
+		}
+		if (me.noDD !== true) {
+			mainPanelItems.push("-");
+			mainPanelItems.push({
+				iconCls: "x-share-icon",
+				handler: function() {
+					var g = location,
+						h = g.protocol + "//" + g.host + g.pathname + "#!" + lzbase62.compress(
+							g.hash.substring(3));
+					Ext.create("widget.window", {
+						title: "シェアする",
+						modal: true,
+						width: me.noDD === true ? Ext.getBody().getWidth() : 600,
+						height: 240,
+						layout: "fit",
+						autoDestroy: true,
+						closable: true,
+						items: {
+							xtype: "textarea",
+							value: h,
+							style: {
+								margin: "5px"
+							}
+						},
+						dockedItems: [{
+							xtype: "toolbar",
+							ui: "footer",
+							dock: "bottom",
+							layout: {
+								pack: "center"
+							},
+							items: Ext.create("Ext.button.Button", {
+								text: "閉じる",
+								scope: me,
+								handler: function() {
+									Ext.WindowMgr.getActive().close()
+								},
+								minWidth: 105
+							})
+						}]
+					}).show()
+				}
+			})
 		}
 		me.mainPanel = Ext.create('Ext.panel.Panel', {
 			region: 'center',
@@ -673,7 +958,7 @@ Ext.define('PSO2.SynthesisComponent', {
 			},
 			listeners: {
 				scope: me,
-				afterrender: me.restoreData
+				afterrender: me.onChangeLocationHash
 			}
 		});
 		items.push(me.mainPanel);
@@ -690,6 +975,10 @@ Ext.define('PSO2.SynthesisComponent', {
 
 		/* call parent */
 //		me.callParent(config);
+
+		window.onhashchange = function() {
+			me.onChangeLocationHash()
+		}
 	},
 
 	/**
@@ -698,7 +987,31 @@ Ext.define('PSO2.SynthesisComponent', {
 	initGridMenuButton: function() {
 		var me = this,
 			items = [], i;
-
+		items.push({
+			iconCls: "x-factor-icon",
+			text: me.factorMenuText.on,
+			scope: me,
+			handler: function(d, h) {
+				var f = this.selectedGridCell;
+				if (f) {
+					var g = f.record.get("slot");
+					if (d.text === this.factorMenuText.on) {
+						f.view.store.each(function(l, e) {
+							var k = l.get("slot");
+							if (k != null && k.factor === true) {
+								l.set("slot", this.makeFactor(k, false));
+								return false
+							}
+							return true
+						}, this);
+						f.record.set("slot", this.makeFactor(g, true))
+					} else {
+						f.record.set("slot", this.makeFactor(g, false))
+					}
+				}
+				this.selectedGridCell = null
+			}
+		});
 		for (i = 0; i < me.maxMaterial; i++) {
 			items.push({
 				iconCls: 'x-copy-icon',
@@ -713,16 +1026,10 @@ Ext.define('PSO2.SynthesisComponent', {
 			text: '削除',
 			scope: me,
 			handler: function() {
-				var me = this,
-					item = me.selectedGridCell;
-
+				var item = this.selectedGridCell;
 				if (item) {
-					if (item.view.store.count() - 1 == item.rowIndex) {
-						item.view.getStore().getAt(item.rowIndex).set('slot', null);
-					} else {
-						item.view.getStore().removeAbility(item.record, item.rowIndex);
-					}
-					item.view.refresh();
+					item.view.getStore().removeAbility(d.record, d.rowIndex);
+					item.view.refresh()
 				}
 				this.selectedGridCell = null;
 			}
@@ -797,11 +1104,13 @@ Ext.define('PSO2.SynthesisComponent', {
 	 * @return {Boolean} 値が正しい場合True、不正な場合はFalseを返却
 	 */
 	urlHashValidate: function(p) {
-		var me = this, arr = me.initHashArray(p),
+		var me = this, arr = me.hasharray(p),
 			len = arr.length, i;
 
 		/* 素体、素材のチェック */
-		if (!p['s']) return false;
+		if (!p.s && p.s !== "") {
+			return false
+		}
 		for (i = 1; i < me.maxMaterial; i++) {
 			if (!p[i] && p[i] !== "") return false;
 		}
@@ -818,189 +1127,99 @@ Ext.define('PSO2.SynthesisComponent', {
 
 	/**
 	 * @private
-	 * パラメータチェック用に配列にして返却する
-	 * オプション(o)は含まない
-	 *
-	 * @param {Object} p URLハッシュ
-	 * @return {Array} 配列にしたパラメータ
-	 */
-	initHashArray: function(p) {
-		var me = this,
-			arr = [p['s'], p['r']], i;
-
-		for (i = 1; i <= me.maxMaterial; i++) {
-			arr.push(p[i]);
-		}
-
-		return arr;
-	},
-
-	/**
-	 * @private
 	 * タブパネルに能力追加パネルを生成し追加する
 	 *
 	 * @param {Object} params 初期値パラメータ(URLハッシュから取得)
 	 * @return {Ext.panel.Panel} 生成されたパネルを返却
 	 */
-	addTab: function(params) {
-		var me = this,
-			items = [{
-				xtype: 'panel',
+	addTab: function(d) {
+		var l = this,
+			k = [{
+				xtype: "panel",
 				frame: true,
 				items: {
-					xtype: 'fieldset',
-					layout: 'anchor',
-					title: '追加能力を選択',
+					xtype: "fieldset",
+					layout: "anchor",
+					title: "追加能力を選択",
 					autoHeight: true,
-					padding: '0 0 0 4',
-					margin: '0 0 0 0',
+					padding: "0 0 0 4",
+					margin: "0 0 0 0",
 					defaults: {
-						xtype: 'checkbox',
-						anchor: '100%',
+						xtype: "checkbox",
+						anchor: "100%",
 						hideEmptyLabel: true,
-						scope: me,
-						handler: me.onCheckAbility
+						scope: l,
+						handler: l.onCheckAbility
 					}
 				}
-			}], opts = {};
-
-		if (me.ajaxData) {
+			}],
+			a = {};
+		if (l.ajaxData) {
 			/* 定義の上書き */
-			if (me.ajaxData.optionList && me.ajaxData.optionList.support) {
-				opts['optionStore1'] =  Ext.create('Ext.data.Store', {
-					fields: ['name', 'sname', 'value', 'fn'],
-					data: me.ajaxData.optionList.support
-				});
+			if (l.ajaxData.optionList && l.ajaxData.optionList.support) {
+				a.supportData = l.ajaxData.optionList.support
 			}
-			if (me.ajaxData.optionList && me.ajaxData.optionList.additional) {
-				opts['optionStore2'] =  Ext.create('Ext.data.Store', {
-					fields: ['name', 'value', 'extend', 'effect'],
-					data: me.ajaxData.optionList.additional
-				});
+			if (l.ajaxData.optionList && l.ajaxData.optionList.additional) {
+				a.additionalData = l.ajaxData.optionList.additional
 			}
-			if (me.ajaxData.sameBonusBoost)
-				opts['sameBonusBoost'] = me.ajaxData.sameBonusBoost;
-			if (me.ajaxData.excludePattern) {
-				if (me.ajaxData.excludePattern['addition']) {
-					var p = me.ajaxData.excludePattern['addition'],
-						chkFn = function(add, slot) {
-							var i, j, c, f1, f2;
-
-							p = Ext.isArray(p)? p: [p];
-							for (i = 0; i < p.length; i++) {
-								c = Ext.isArray(p[i])? p[i]: [p[i]];
-								f1 = f2 = false;
-
-								for (j = 0; j < c.length; j++) {
-									if (c[j] == slot.substr(0, c[j].length)) f1 = true;
-									if (c[j] == add.substr(0, c[j].length)) f2 = true;
-								}
-								if (f1 && f2) return true;
-							}
-							return false;
-					};
-
-					/* 追加パターンをオーバーライド */
-					me.createSlot = function() {
-						return me.ability.createSlotStore({
-							addAbility: function(data) {
-								var cd = data.code.substr(0, 2), slot,
-									len = this.getCount(), i;
-
-								/* 上書きできる同系統の能力があるかチェック */
-								for (i = 0; i < len; i++) {
-									slot = this.getAt(i).get('slot');
-
-									if (slot == null) break;
-
-									/* 全く同じ能力の場合は無視 */
-									if (slot.code == data.code) return true;
-
-									/* 同系統の場合は上書き可能 */
-									if (slot.code.substr(0, 2) == cd) break;
-
-									/* 新規チェック */
-									if (chkFn(data.code, slot.code)) break;
-								}
-								/* 8スロ以上は却下 */
-								if (len <= i) return false;
-
-								return this.getAt(i).set('slot', data);
-							},
-						});
-					};
-				}
-				if (me.ajaxData.excludePattern['select']) {
-					/* 排他パターンをオーバーライド */
-					opts['isExcludePattern'] = function(code1, code2) {
-						var pattern = me.ajaxData.excludePattern['select'];
-							pattern = Ext.isArray(pattern)? pattern: [pattern];
-
-						var len = pattern.length,
-							cd1 = code1.substr(0, 2), cd2 = code2.substr(0, 2),
-							re = /([^\*]+)\*$/, mm,
-							checked = function(p, cd) {
-								if (mm = p.match(re)) {
-									return p.substr(0, mm[1].length) == cd.substr(0, mm[1].length);
-								}
-								return p == cd;
-							};
-
-						if (cd1 == cd2) return true;
-						for (var i = 0; i < len; i++) {
-							var x = pattern[i], flag = false, j;
-							x = Ext.isArray(x)? x: [x];
-
-							for (j = 0; j < x.length; j++) {
-								flag = checked(x[j], code1);
-								if (flag) break;
-							}
-							if (flag) {
-								for (j = 0; j < x.length; j++) {
-									if (checked(x[j], code2)) return true;
-								}
-							}
-						}
-						return false;
-					};
-				}
+			if (l.ajaxData.optionList && l.ajaxData.optionList.additional) {
+				a.potentialData = l.ajaxData.optionList.potential
+			}
+			if (l.ajaxData.sameBonusBoost) {
+				a.sameBonusBoost = l.ajaxData.sameBonusBoost
+			}
+			/* 排他パターンをオーバーライド */
+			if (l.ajaxData.excludePattern && l.ajaxData.excludePattern.select) {
+				a.excludePattern = l.ajaxData.excludePattern.select
+			}
+			if (l.ajaxData.excludePattern && l.ajaxData.excludePattern.addition) {
+				l.ability.excludePattern = l.ajaxData.excludePattern.addition
 			}
 		}
-		items.push(Ext.create('PSO2.ResultPanel', Ext.apply({
+		k.push(Ext.create("PSO2.ResultPanel", Ext.apply({
 			frame: true,
-			noDD: me.noDD,
-			abilityComponent: me.ability,
-			boostFunction: me.enableBoost? me.boostFunction: null,
+			noDD: l.noDD,
+			abilityComponent: l.ability,
+			boostFunction: l.enableBoost ? l.boostFunction : null,
 			listeners: {
-				scope: me,
-				opt1change: me.onAbilityOptionChange,
-				opt2change: function(rp, item, init) {
-					var me = this;
-						me.onAbilityOptionChange(rp, item, init);
-					me.updateCheckbox(rp, me.tabPanel.activeTab.query('fieldset')[0]);
+				scope: l,
+				opt1change: function(m, n, o) {
+					if (!m.suspendCheckChange) {
+						this.onAbilityOptionChange(m, n, o)
+					}
+				},
+				opt2change: function(m, n, o) {
+					if (!m.suspendCheckChange) {
+						this.onAbilityOptionChange(m, n, o);
+						this.updateCheckbox(m, this.tabPanel.activeTab.query("fieldset")[
+							0])
+					}
+				},
+				opt3change: function(m, n, o) {
+					if (!m.suspendCheckChange) {
+						this.onAbilityOptionChange(m, n, o)
+					}
 				}
 			}
-		}, opts)));
-
+		}, a)));
 		/* 結果側のパネル作製 */
-		var panel = Ext.create('Ext.panel.Panel', {
+		var b = Ext.create("Ext.panel.Panel", {
 			flex: 1,
 			frame: true,
 			border: false,
 			autoScroll: true,
-			margin: '0 0 0 0',
-			padding: '0 0 0 0',
-			layout: 'column',
+			margin: "0 0 0 0",
+			padding: "0 0 0 0",
+			layout: "column",
 			defaults: {
 				columnWidth: 1 / 2,
-				layout: 'anchor',
+				layout: "anchor",
 				autoHeight: true,
 				defaults: {
-					anchor: '100%'
+					anchor: "100%"
 				}
 			},
-			items: items,
-
+			items: k,
 			/* フィールドセットを取得する(チェックボックスの親コンポーネント) */
 			getFieldSet: function() {
 				var me = this;
@@ -1011,113 +1230,132 @@ Ext.define('PSO2.SynthesisComponent', {
 
 				return me.fieldSet;
 			},
-
 			/* 結果パネルを取得する */
 			getResultPanel: function() {
-				var me = this;
-
-				if (!me.resultPanel) {
-					me.resultPanel = me.query('resultpanel')[0];
+				var m = this;
+				if (!m.resultPanel) {
+					m.resultPanel = m.query("resultpanel")[0]
 				}
-
-				return me.resultPanel;
+				return m.resultPanel
 			},
-
 			/* 結果パネルの情報を更新する */
 			updateResults: function() {
-				var me = this,
-					fs = me.getFieldSet(),
-					rp = me.getResultPanel();
-
-				rp.updateResults(fs);
+				if (l.initializedRestoreData !== true) {
+					var m = this.getFieldSet(),
+						n = this.getResultPanel();
+					n.updateResults(m)
+				}
 			}
 		});
-
 		/* 再構築終了フラグが初期化されている場合、結果パネルの初期化を行う */
-		if (me.initializedRestoreData === false) {
-			var fs = panel.getFieldSet(),
-				rp = panel.getResultPanel();
-
+		if (l.initializedRestoreData === true) {
+			var g = b.getFieldSet(),
+				f = b.getResultPanel();
 			/* フィールドセット描画後にチェックボックスを表示する処理を追加 */
-			fs.on('afterrender', function(arg1, arg2) {
-				var me = this,
-					r = params.r;
-
+			g.on("afterrender", function(p, o) {
+				var t = this,
+					s = d.r;
 				/* 結果パネルの内容を更新する */
-				panel.updateResults();
-
+				b.updateResults();
 				/* チェックボックスの初期化 */
-				if (r) {
-					var cc = r.split('.'),
-						chk = me.query('checkbox'),
-						len, i;
-
-					arg2.myComponent.initializedCheckbox = false;
-					if (Ext.isArray(chk) && (len = chk.length) > 0) {
-						for (i = 0; i < len; i++) {
-							if (0 <= Ext.Array.indexOf(cc, chk[i].inputValue)) {
-								chk[i].setValue(true);
+				if (s) {
+					var u = s.split("."),
+						n = t.query("checkbox"),
+						m, q;
+					o.myComponent.initializedCheckbox = false;
+					if (Ext.isArray(n) && (m = n.length) > 0) {
+						for (q = 0; q < m; q++) {
+							if (0 <= Ext.Array.indexOf(u, n[q].inputValue)) {
+								n[q].setValue(true)
 							}
 						}
 					}
-					arg2.myComponent.initializedCheckbox = true;
+					o.myComponent.initializedCheckbox = true
 				}
-			}, fs, {delay: 1000, myComponent: me});
-
+			}, g, {
+				delay: 1000,
+				myComponent: l
+			});
 			/* 結果パネル描画後に能力追加オプションを選択する処理を追加 */
-			rp.on('afterrender', function(arg1, arg2) {
-				var me = this,
-					o = params.o
-
-				if (o) {
-					var oo = o.split('.'),
-						len = oo.length, i;
-
-					arg2.myComponent.initializedSelectOption = false;
-					for (i = 0; i < len; i++) {
-						me.selectOption(oo[i]);
+			f.on("afterrender", function(q, p) {
+				var s = this,
+					t = d.o;
+				if (t) {
+					var n = t.split("."),
+						m = n.length,
+						r;
+					p.myComponent.initializedSelectOption = false;
+					for (r = 0; r < m; r++) {
+						s.selectOption(n[r])
 					}
-					arg2.myComponent.initializedSelectOption = true;
+					p.myComponent.initializedSelectOption = true
 				}
-			}, rp, {delay: 1000, myComponent: me});
+			}, f, {
+				delay: 1000,
+				myComponent: l
+			})
 		}
-
 		/* タブパネルに合成パネルを追加 */
-		var gridItems = [me.createGridPanel(0, me.createSlot(), panel, params? params['s']: null)];
-		for (var i = 1; i <= me.maxMaterial; i++) {
-			gridItems.push(me.createGridPanel(i, me.createSlot(), panel, params? params[i]: null));
+		var c = [l.createGridPanel(0, l.ability.createSlotStore(), b, d ? d.s :
+			null)];
+		for (var e = 1; e <= l.maxMaterial; e++) {
+			c.push(l.createGridPanel(e, l.ability.createSlotStore(), b, d ? d[e] :
+				null))
 		}
-
-		var retPanel = me.tabPanel.add({
-			title: '合成パネル',
+		var h = l.tabPanel.add({
+			title: "合成パネル",
 			autoScroll: true,
 			closable: true,
+			fillDuster: function() {
+				var o = this.query("gridpanel"),
+					n, m = 0;
+				for (n = 0; n < o.length; n++) {
+					m = Math.max(m, o[n].getAbilityCount())
+				}
+				l.initializedRestoreData = true;
+				try {
+					for (n = 0; n < o.length; n++) {
+						if (n == 0) {
+							o[n].fillDuster(m)
+						} else {
+							if (0 < o[n].getAbilityCount()) {
+								o[n].fillDuster(m)
+							}
+						}
+					}
+				} finally {
+					l.initializedRestoreData = false
+				}
+				b.updateResults();
+				l.onChangeAbility()
+			},
 			layout: {
-				type: 'vbox',
-				align: 'stretch',
-				padding: '0 0 5 0'
+				type: "vbox",
+				align: "stretch",
+				padding: "0 0 5 0"
 			},
 			items: [{
-				layout: 'column',
+				layout: "column",
 				defaults: {
-					columnWidth: 1 / (me.maxMaterial + 1),
-					layout: 'anchor',
+					columnWidth: 1 / (l.maxMaterial + 1),
+					layout: "anchor",
 					autoHeight: true,
 					defaults: {
-						anchor: '100%'
+						anchor: "100%"
 					}
 				},
 				/* 能力追加スロット用のストアを生成してグリッドを作成 */
-				items: gridItems
-			}, panel],
-			getResultPanel: panel.getResultPanel
+				items: c
+			}, b],
+			getResultPanel: b.getResultPanel
 		});
-
 		/* URLハッシュを更新する */
-		me.addLocationHash(retPanel);
-
+		l.addLocationHash(h);
+		if (l.initializedRestoreData !== true) {
+			l.updateLocationHash()
+		}
 		/* 生成された合成パネルを返却 */
-		return retPanel;
+		return h
 	},
 
 	createSlot: function() {
@@ -1140,20 +1378,22 @@ Ext.define('PSO2.SynthesisComponent', {
 				if (me.urlHashValidate(p)) {
 					return Ext.Msg.prompt('状態の保存', '対象のパネル内容をクッキーへ保存します。<br/>保存する名称を入力して下さい。(省略可)', function(btn, text) {
 						if (btn == 'ok') {
-							var cookie = PSO2.Cookie.get(me.constCookieName) || {};
+							var cookie = PSO2.Cookie.get(me.constCookieName) || {},
+							f = {};
 
 							if (text == "") text = Ext.Date.format(new Date(), 'Y-m-d H:i:s');
+							me.hashcopy(me.locationHash[index], f);
 
 							if (cookie[text]) {
 								Ext.Msg.confirm('確認', '同じ名前のデータがあります。上書きしますか？', function(btn) {
 									if (btn == 'yes') {
-										cookie[text] = me.locationHash[index];
+										cookie[text] = f
 										PSO2.Cookie.set(me.constCookieName, cookie);
 										Ext.Msg.alert('確認', '保存が完了しました。');
 									}
 								}, me);
 							} else {
-								cookie[text] = me.locationHash[index];
+								cookie[text] = f;
 								PSO2.Cookie.set(me.constCookieName, cookie);
 								Ext.Msg.alert('確認', '保存が完了しました。');
 							}
@@ -1253,7 +1493,7 @@ Ext.define('PSO2.SynthesisComponent', {
 		var me = this;
 
 		if (params) {
-			var v, tab, h, i;
+			var v, tab
 
 			if (Ext.isFunction(params.get)) {
 				v = params.get('value');
@@ -1262,14 +1502,13 @@ Ext.define('PSO2.SynthesisComponent', {
 			}
 
 			/* パネルを追加する */
-			me.initializedRestoreData = false;
-			tab = me.addTab(v);
 			me.initializedRestoreData = true;
-
-			/* URLハッシュを作製する */
-			h = me.addLocationHash(tab);
-			h['s'] = v['s']; h['r'] = v['r']; h['o'] = v['o'];
-			for (i = 1; i <= me.maxMaterial; i++) h[i] = v[i];
+			try {
+				tab = me.addTab(v)
+			} finally {
+				me.initializedRestoreData = false
+			}
+			me.hashcopy(v, me.addLocationHash(tab));
 
 			/* URLハッシュを更新する */
 			me.updateLocationHash();
@@ -1279,6 +1518,12 @@ Ext.define('PSO2.SynthesisComponent', {
 		}
 	},
 
+	// selectLoadData: function(b, f) {
+	// 	var e = this;
+	// 	if (f) {
+
+	// 	}
+	// },
 	/**
 	 * @private
 	 * 能力追加オプションが変更された場合に呼び出されるイベント処理
@@ -1311,6 +1556,23 @@ Ext.define('PSO2.SynthesisComponent', {
 		}
 	},
 
+	makeFactor: function(b, a) {
+		var c;
+		if (a == true) {
+			c = Ext.applyIf({
+				source: b,
+				factor: true,
+				extend: null,
+				generate: null
+			}, b);
+			c.code = "*" + b.code
+		} else {
+			c = b.source;
+			delete b
+		}
+		return c
+	},
+
 	/**
 	 * @private
 	 * 能力追加スロット用のグリッドパネルを生成する
@@ -1341,12 +1603,63 @@ Ext.define('PSO2.SynthesisComponent', {
 			scope: me,
 			update: me.onChangeAbility
 		});
-
+var f
 		/* 能力追加スロット用ストアをベースにグリッドパネルを生成 */
 		grid = Ext.create('Ext.grid.Panel', {
 			title: me.panelNames[index],
 			titleIndex: titleIndex,
 			sortableColumns: false,
+			dustAbilities: me.ability.abilityStore.getRange(me.ability.abilityStore.find(
+				"gid", "F")),
+			getAbilityCount: function() {
+				var m = this.store;
+				return m.getEnableData().length - m.getFactorCount()
+			},
+			locked: false,
+			collapsed: false,
+			collapsible: true,
+			collapseCls: "-collapse-",
+			lockedCls: "slot-grid-locked",
+			listeners: {
+				scope: me,
+				beforecollapse: function(r, q, m, o) {
+					if (r.tools[0] && r.tools[0].rendered) {
+						var n = r.tools[0];
+						if (r.locked === true) {
+							n.toolEl.removeCls(n.componentCls + r.collapseCls + n.expandType);
+							n.toolEl.addCls(n.componentCls + r.collapseCls + r.collapseDirection);
+							r.el.removeCls(r.lockedCls)
+						} else {
+							n.toolEl.removeCls(n.componentCls + r.collapseCls + r.collapseDirection);
+							n.toolEl.addCls(n.componentCls + r.collapseCls + n.expandType);
+							r.el.addCls(r.lockedCls)
+						}
+						r.locked = !r.locked
+					}
+					return false
+				}
+			},
+			fillDuster: function(n) {
+				var p, o, m;
+				n = Math.min(n + this.store.getFactorCount(), this.store.getCount());
+				if (this.getAbilityCount() <= n) {
+					p = 0;
+					while (p < n && (m = this.store.getAt(p).get("slot")) != null) {
+						if (m.gid == "F") {
+							this.store.removeAbility(m, p)
+						} else {
+							p++
+						}
+					}
+					for (o = p = 0; p < n; p++) {
+						m = this.store.getAt(p).get("slot");
+						if (m == null) {
+							this.store.addAbility(this.dustAbilities[o++].data)
+						}
+					}
+					this.view.refresh()
+				}
+			},
 			columns: [{
 				dataIndex: 'name',
 				header: 'スロット',
@@ -1355,9 +1668,12 @@ Ext.define('PSO2.SynthesisComponent', {
 			}, {
 				dataIndex: 'slot',
 				header: '能力',
-				renderer : function(v) {
+				renderer : function(v, n, m, r, p, o) {
 					if (v != null) {
-						return v.name;
+						if (v.factor) {
+							n.tdCls = "x-factor-icon"
+						}
+						return v.name
 					}
 					return '';
 				}
@@ -1374,10 +1690,10 @@ Ext.define('PSO2.SynthesisComponent', {
 			var abilityStore = me.ability.getAbilityStore();
 
 			Ext.Array.forEach(initValue.split('.'), function(code) {
-				var rec = abilityStore.findRecord('code', code);
-
+				var m = (code.substr(0, 1) == "*"),
+					rec = abilityStore.findRecord("code", m ? code.substr(1) : code);
 				if (rec) {
-					grid.store.addAbility(rec.data);
+					grid.store.addAbility(m ? me.makeFactor(rec.data, true) : rec.data)
 				}
 			});
 		}
@@ -1409,6 +1725,11 @@ Ext.define('PSO2.SynthesisComponent', {
 						record: record,
 						rowIndex: rowIndex
 					};
+					if (record.get("slot").factor !== true) {
+						me.gridMenu.items.getAt(0).setText(me.factorMenuText.on)
+					} else {
+						me.gridMenu.items.getAt(0).setText(me.factorMenuText.off)
+					}
 					var target = [], i;
 
 					Ext.Array.forEach(this.tabPanel.getActiveTab().query('grid'), function(grid) {
@@ -1418,7 +1739,7 @@ Ext.define('PSO2.SynthesisComponent', {
 					});
 
 					for (i = 0; i < me.maxMaterial; i++) {
-						me.copyButtonUpdate(view, me.gridMenu.items.getAt(i), i, target[i]);
+						me.copyButtonUpdate(view, me.gridMenu.items.getAt(i + 1), i, target[i]);
 					}
 					me.gridMenu.showAt(e.getXY());
 				}
@@ -1427,12 +1748,22 @@ Ext.define('PSO2.SynthesisComponent', {
 			/* セルクリック時のメニュー表示(スマホ) */
 			listeners['cellclick'] = function(view, cell, cellIndex, record, row, rowIndex, e) {
 				e.stopEvent();
+				var g
+				if (view.panel && view.panel.locked === true) {
+					return false
+				}
 				me.selectedGridCell = {
 					view: view,
 					record: record,
 					rowIndex: rowIndex
 				};
 				if (record.get('slot') != null) {
+					if (record.get("slot").factor !== true) {
+						me.gridMenu.items.getAt(0).setText(me.factorMenuText.on)
+					} else {
+						me.gridMenu.items.getAt(0).setText(me.factorMenuText.off)
+					}
+
 					/* アイテムがある場合は削除ボタンの表示 */
 					var target = [];
 
@@ -1442,7 +1773,7 @@ Ext.define('PSO2.SynthesisComponent', {
 						}
 					});
 					for (i = 0; i < me.maxMaterial; i++) {
-						me.copyButtonUpdate(view, me.gridMenu.items.getAt(i), i, target[i]);
+						me.copyButtonUpdate(view, me.gridMenu.items.getAt(i + 1), i, target[i]);
 					}
 					me.gridMenu.showAt(e.getXY());
 				} else {
@@ -1508,6 +1839,7 @@ Ext.define('PSO2.SynthesisComponent', {
 					d = sourceEl.cloneNode(true);
 					d.id = Ext.id();
 					return v.dragData = {
+						gridId: this.id,
 						sourceEl: sourceEl,
 						repairXY: Ext.fly(sourceEl).getXY(),
 						ddel: d,
@@ -1527,53 +1859,66 @@ Ext.define('PSO2.SynthesisComponent', {
 	 *
 	 * @param {Ext.panel.Panel} v ドロップゾーン生成先パネル
 	 */
-	initializeSlotDropZone: function(v) {
-		var gridView = v,
-			grid = gridView.up('gridpanel');
+	initializeSlotDropZone: function(a) {
+		var c = this,
+			d = a,
+			grid = d.up("gridpanel");
 
 		/* ドラッグゾーンの追加 */
-		v.dragZone = Ext.create('Ext.dd.DragZone', v.getEl(), {
-			getDragData: function(e) {
-				var sourceEl = e.getTarget(v.itemSelector, 10), d;
-				if (sourceEl) {
-					if (!v.getRecord(sourceEl).data.slot) return null;
-					d = sourceEl.cloneNode(true);
-					d.id = Ext.id();
-					return v.dragData = {
-						sourceEl: sourceEl,
-						repairXY: Ext.fly(sourceEl).getXY(),
-						ddel: d,
-						patientData: v.getRecord(sourceEl).data.slot
-					};
+		a.dragZone = Ext.create("Ext.dd.DragZone", a.getEl(), {
+			getDragData: function(g) {
+				var f = g.getTarget(a.itemSelector, 10),
+					h;
+				if (f) {
+					if (!a.getRecord(f).data.slot) {
+						return null
+					}
+					h = f.cloneNode(true);
+					h.id = Ext.id();
+					return a.dragData = {
+						gridId: this.id,
+						sourceEl: f,
+						repairXY: Ext.fly(f).getXY(),
+						ddel: h,
+						patientData: a.getRecord(f).data.slot
+					}
 				}
 			},
-			beforeInvalidDrop: function(target, e, id) {
-				var el = this.dragData.sourceEl,
-					rec = v.getRecord(el);
-				if (rec) {
-					rec.store.removeAbility(rec, el.viewIndex);
-					v.refresh();
-
-			        this.proxy.hide();
+			beforeInvalidDrop: function(h, g, l) {
+				var f = this.dragData.sourceEl,
+					k = a.getRecord(f);
+				if (k && !Ext.get(h) && !d.panel.locked) {
+					k.store.removeAbility(k, f.viewIndex);
+					a.refresh();
+					this.proxy.hide()
 				}
 			},
 			getRepairXY: function() {
-				return this.dragData.repairXY;
+				return this.dragData.repairXY
 			}
 		});
 
 		/* ドロップゾーンの追加 */
-		grid.dropZone = Ext.create('Ext.dd.DropZone', v.el, {
-			getTargetFromEvent: function(e) {
-				return e.getTarget('.x-grid-cell-last');
+		grid.dropZone = Ext.create("Ext.dd.DropZone", a.el, {
+			getTargetFromEvent: function(f) {
+				return f.getTarget(".x-grid-cell-last")
 			},
-			onNodeDrop : function(target, dd, e, data) {
-				var me = this;
-
-				/* 能力の追加 */
-				return gridView.getStore().addAbility(data.patientData);
+			onNodeDrop: function(k, f, h, g) {
+				if (d.panel && d.panel.locked) {
+					return true
+				}
+				if (this.id == g.gridId) {
+					d.getStore().swapAbility(g.sourceEl.viewIndex, h.getTarget(d.itemSelector)
+						.viewIndex);
+					d.refresh();
+					c.onChangeAbility()
+				} else {
+					/* 能力の追加 */
+					d.getStore().addAbility(g.patientData)
+				}
+				return true
 			}
-		});
+		})
 	},
 
 	/**
@@ -1584,7 +1929,7 @@ Ext.define('PSO2.SynthesisComponent', {
 	onChangeAbility: function() {
 		var me = this, tab, rp, as, index;
 
-		if (me.initializedRestoreData === true) {
+		if (me.initializedRestoreData !== true) {
 			tab = this.tabPanel.activeTab;
 			rp = tab && tab.query('resultpanel')[0];
 			as = rp && rp.abilitySet;
@@ -1650,7 +1995,7 @@ Ext.define('PSO2.SynthesisComponent', {
 	updateCheckbox: function(rp, fs) {
 		var chkbox = fs.query('checkbox');
 
-		if (rp.abilityCount() < rp.getEnableCheckMax()) {
+		if (rp.abilityCount() < rp.getEnableMaxCount()) {
 			/* 能力数に達していない場合、チェックボックスを有効にする */
 			Ext.Array.forEach(chkbox, function(box) {
 				if (box.disabled)
@@ -1697,7 +2042,7 @@ Ext.define('PSO2.SynthesisComponent', {
 	addLocationHash: function(panel, force) {
 		var me = this, hash, i;
 
-		if (me.initializedRestoreData === false && force !== true) {
+		if (me.initializedRestoreData === true && force !== true) {
 			/* 再構築中は処理をしない */
 			return location.hash;
 		}
@@ -1708,10 +2053,6 @@ Ext.define('PSO2.SynthesisComponent', {
 		hash = {id: panel.id, s: '', r: '', o: ''};
 		for (i = 1; i <= me.maxMaterial; i++) hash[i] = '';
 		me.locationHash.push(hash);
-
-		/* URLハッシュを更新する */
-		me.updateLocationHash();
-
 		return hash;
 	},
 
@@ -1727,7 +2068,7 @@ Ext.define('PSO2.SynthesisComponent', {
 			index = me.findLocationHashBy(panel),
 			hash;
 
-		if (me.initializedRestoreData === false) {
+		if (me.initializedRestoreData === true) {
 			/* 再構築中は処理をしない */
 			return location.hash;
 		}
@@ -1755,12 +2096,8 @@ Ext.define('PSO2.SynthesisComponent', {
 			if (0 < len) {
 				params = '#!';
 				for (i = 0; i < len && i < me.limitUrlSize; i++) {
-					params += '/' + me.makeHashParameter(me.locationHash[i], 's');
-					for (j = 1; j <= me.maxMaterial; j++) {
-						params += '&' + me.makeHashParameter(me.locationHash[i], j);
-					}
-					params += '&' + me.makeHashParameter(me.locationHash[i], 'r');
-					params += '&' + me.makeHashParameter(me.locationHash[i], 'o');
+					params += "/";
+					params += me.hashmake(me.locationHash[i])
 				}
 			}
 
@@ -1768,6 +2105,125 @@ Ext.define('PSO2.SynthesisComponent', {
 				/* URLを更新する */
 				location.hash = params;
 			}
+		}
+	},
+
+	onChangeLocationHash: function() {
+		var o = this,
+			k = o.locationHash || [],
+			r = o.ability.abilityStore;
+		if (location && location.hash) {
+			if (location.hash.match(/^#!([a-zA-Z0-9]+)$/)) {
+				return location.hash = "!/" + lzbase62.decompress(RegExp.$1)
+			} else {
+				if (location.hash.match(/^#!\/([a-zA-Z0-9\.\=&\/\*]+)/)) {
+					var e = RegExp.$1.split("/"),
+						m = e.length,
+						g;
+					for (g = 0; g < m && g < o.limitUrlSize; g++) {
+						if (g < k.length) {
+							if (e[g] != o.hashmake(k[g])) {
+								var b = Ext.urlDecode(e[g]);
+								if (o.urlHashValidate(b)) {
+									var c = Ext.getCmp(k[g].id),
+										h = c.getResultPanel(),
+										l = h.ownerCt.getFieldSet(),
+										n = b.r.split("."),
+										d = c.query("grid"),
+										q = function(v, y) {
+											var p = v.store.count(),
+												s = y.split("."),
+												x, u, w;
+											for (var t = 0; t < p; t++) {
+												x = s.shift();
+												if (x) {
+													u = (x.substr(0, 1) == "*");
+													w = r.findRecord("code", u ? x.substr(1) : x);
+													if (w) {
+														v.store.getAt(t).data.slot = (u ? o.makeFactor(w.data, true) :
+															w.data)
+													}
+												} else {
+													v.store.getAt(t).data.slot = null
+												}
+											}
+											v.getView().refresh()
+										};
+									q(d[0], b.s);
+									for (var f = 1; f <= o.maxMaterial; f++) {
+										q(d[f], b[f])
+									}
+									h.suspendCheckChange = 1;
+									h.ownerCt.updateResults();
+									l.items.each(function(p) {
+										p.suspendCheckChange = 1;
+										if (0 <= n.indexOf(p.inputValue)) {
+											p.setValue(true);
+											h.addAbility(p, true)
+										} else {
+											p.setValue(false);
+											h.removeAbility(p, true)
+										}
+										p.suspendCheckChange = 0
+									});
+									h.refresh();
+									o.updateCheckbox(h, l);
+									Ext.Array.forEach(b.o.split("."), function(p) {
+										h.selectOption(p)
+									});
+									h.refresh();
+									o.updateCheckbox(h, l);
+									h.suspendCheckChange = 0;
+									o.hashcopy(b, k[g])
+								}
+							}
+						} else {
+							var b = Ext.urlDecode(e[g]);
+							o.initializedRestoreData = true;
+							try {
+								o.hashcopy(b, o.addLocationHash(o.addTab(b), true))
+							} finally {
+								o.initializedRestoreData = false
+							}
+						}
+					}
+					if (g < k.length) {
+						var a = [];
+						while (g != k.length) {
+							a.push((k.pop())["id"])
+						}
+						Ext.Array.forEach(a, function(s) {
+							var p = Ext.getCmp(s);
+							if (p) {
+								p.close()
+							}
+						})
+					}
+				}
+			}
+		}
+	},
+
+	hashmake: function(d) {
+		var c = this,
+			b, a = "";
+		a += c.makeHashParameter(d, "s");
+		for (b = 1; b <= c.maxMaterial; b++) {
+			a += "&" + c.makeHashParameter(d, b)
+		}
+		a += "&" + c.makeHashParameter(d, "r");
+		a += "&" + c.makeHashParameter(d, "o");
+		return a
+	},
+
+	hashcopy: function(d, a) {
+		var c = this,
+			b;
+		a.s = d.s;
+		a.r = d.r;
+		a.o = d.o;
+		for (b = 1; b <= c.maxMaterial; b++) {
+			a[b] = d[b]
 		}
 	},
 

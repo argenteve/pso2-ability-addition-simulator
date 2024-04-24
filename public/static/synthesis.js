@@ -852,6 +852,7 @@ Ext.define('PSO2.SynthesisComponent', {
 						{'T': '10% UP', 'V': 10, 'F': function(v) { return Math.min(v + 10, 100); }},
 						{ T: "15% UP",V: 25,F: function(g) { return Math.min(g + 15, 100) } },
 						{ T: "20% UP", V: 30, F: function(g) { return Math.min(g + 20, 100) } },
+						{ T: "30% UP", V: 40, F: function(g) { return Math.min(g + 30, 100) } },
 						{ T: "打撃力系", V: 11, F: function(g, x) { if (x == 1) { g = Math.min(g + 5, 100) } return g } },
 						{ T: "射撃力系", V: 12, F: function(g, x) { if (x == 2) { g = Math.min(g + 5, 100) } return g } },
 						{ T: "法撃力系", V: 13, F: function(g, x) { if (x == 3) { g = Math.min(g + 5, 100) } return g } },

@@ -29,7 +29,7 @@ Ext.define('PSO2.Ability', {
 	extend: 'Ext.data.Model',
 	fields: [
 		'code', 'gid', 'name', 'lvup', 'extend', 'generate',
-		'require', 'extup', 'status', 'effect'
+		'require', 'extup', 'status', 'effect', "dom", "rensei", "namengs", "effectngs"
 	]
 });
 
@@ -50,9 +50,12 @@ Ext.define('PSO2.Slot', {
  *****************************************************************************/
 Ext.define('PSO2.AbilitySet', {
 	extend: 'Ext.Base',
+	renseiCd: "VN01",
 
 	/** ミューテーションIコード */
 	mutationCd: 'OA01',
+	mutationICd: "OA01",
+	mutationIICd: "OA02",
 
 	/** フォトンコレクトコード */
 	photonCd: 'WA01',
@@ -66,10 +69,29 @@ Ext.define('PSO2.AbilitySet', {
 	 * @param {Object} config インスタンス生成時の設定情報
 	 */
 	constructor: function(config) {
-		var me = this;
+		var me = this,
+			c;
 
 		/* 設定情報の取り込み */
 		Ext.apply(me, config);
+		if (me.abilityStore) {
+			c = me.abilityStore.findRecord("name", "ミューテーションI");
+			if (c) {
+				me.mutationICd = c.get("code")
+			}
+			c = me.abilityStore.findRecord("name", "ミューテーションII");
+			if (c) {
+				me.mutationIICd = c.get("code")
+			}
+			c = me.abilityStore.findRecord("name", "フォトンコレクト");
+			if (c) {
+				me.photonCd = c.get("code")
+			}
+			c = me.abilityStore.findRecord("name", "錬成の導き");
+			if (c) {
+				me.renseiCd = c.get("code")
+			}
+		}
 
 		/* 値の初期化 */
 		me.stores = [];
@@ -83,6 +105,10 @@ Ext.define('PSO2.AbilitySet', {
 	 */
 	getEnableData: function(index) {
 		return this.stores[index].getEnableData();
+	},
+
+	getFactorCount: function(a) {
+		return this.stores[a].getFactorCount()
 	},
 
 	/**
@@ -152,6 +178,15 @@ Ext.define('PSO2.AbilitySet', {
 		return 0 < me.hashStack[me.mutationCd];
 	},
 
+	isMutationI: function() {
+		var a = this;
+		return 0 < a.hashStack[a.mutationICd]
+	},
+	isMutationII: function() {
+		var a = this;
+		return 0 < a.hashStack[a.mutationIICd]
+	},
+
 	/**
 	 * フォトンコレクトが利用されているかを調べる
 	 *
@@ -161,6 +196,36 @@ Ext.define('PSO2.AbilitySet', {
 		var me = this;
 
 		return 0 < me.hashStack[me.photonCd];
+	},
+
+	isRensei: function() {
+		var a = this,
+			b = 0,
+			c = a.getLocationHash(0),
+			i;
+		for (i = 0; i < c.length; i++) {
+			if (c[i] == a.renseiCd) {
+				b = 5;
+			}
+		}
+		return b
+	},
+
+	enableMaterial: function() {
+		var d = this,
+			a = d.stores.length,
+			c = 0,
+			b;
+		for (b = 1; b < a; b++) {
+			if (d.stores[b].exist()) {
+				c++
+			}
+		}
+		return c
+	},
+
+	enableMaterialMaxCount: function() {
+		return Math.min(this.enableCheckMax, this.stores[0].count() - 1)
 	},
 
 	/**
@@ -187,7 +252,14 @@ Ext.define('PSO2.AbilitySet', {
 
 		/* ループ */
 		for (i = 0; i < list.length; i++) {
-			fn.call(scope, me.abilityStore.findRecord('code', list[i])['data']);
+			if (list[i]) {
+				if (list[i].substr(0, 1) == "*") {
+					fn.call(scope, me.abilityStore.findRecord("code", list[i].substr(1))["data"],
+						true)
+				} else {
+					fn.call(scope, me.abilityStore.findRecord("code", list[i])["data"], false)
+				}
+			}
 		}
 	},
 
@@ -199,7 +271,7 @@ Ext.define('PSO2.AbilitySet', {
 	 */
 	resetAbility: function() {
 		var me = this, len = me.stores.length,
-			sLen = me.getEnableData(0).length, check;
+			sLen = me.getEnableData(0).length - me.getFactorCount(0), check;
 
 		/* 素体・素材の個数チェック */
 		if (sLen == 0) {
@@ -215,7 +287,7 @@ Ext.define('PSO2.AbilitySet', {
 			/* 素体が1スロ以上の場合は素材のスロット数が超える */
 			check = true;
 			for (i = 1; i < len; i++) {
-				var e = me.getEnableData(i).length;
+				var e = me.getEnableData(i).length - me.getFactorCount(i);
 				if (0 < e && e < sLen) {
 					/* 素材に値があればOK */
 					check = false; break;
@@ -232,7 +304,7 @@ Ext.define('PSO2.AbilitySet', {
 			}
 
 			/* 有効にできる能力の最大数の更新 */
-			me.enableCheckMax = Math.min(sLen + 1, me.maxEnableAbility + 1);
+			me.enableCheckMax = sLen + 1;
 
 			/* レベルアップアビリティのリセット */
 			me.resetLevelupAbility();
@@ -261,11 +333,12 @@ Ext.define('PSO2.AbilitySet', {
 		me.levelupHashStack = {};
 
 		/* 継承率がアップする場合の特殊能力コードを記録 */
-		me.exStack = [];
+		me.exStack = {};
 
 		/* 合成パターンにより新規に追加された特殊能力コードと合成確率 */
 		me.refStack = [];
 		me.refHashStack = {};
+		me.refBonusStack = {}
 	},
 
 	/**
@@ -310,19 +383,31 @@ Ext.define('PSO2.AbilitySet', {
 	resetLevelupAbility: function() {
 		var me = this,
 			keys = me.getKeyList(me.hashStack),
-			len = keys.length, index, lu, i;
-
+			len = keys.length, index, lu, i,
+			a, g, k;
 		for (i = 0; i < len; i++) {
-			if (1 < me.hashStack[keys[i]]) {
+			a = me.hashStack[keys[i]];
+			if (1 < a) {
 				/* 2個以上でレベルアップ */
 				/* my method */
-				index = me.indexOf(me.stack, 'code', keys[i]);
+				index = me.indexOf(me.stack, "code", keys[i]);
 				if (0 <= index) {
-					lu = me.stack[index]['lvup'];
+					lu = me.stack[index]["lvup"];
 					if (lu && !me.levelupHashStack[lu]) {
 						/* レベルアップのキーが存在しない場合 */
-						me.levelupStack.push(me.abilityStore.findRecord('code', lu)['data']);
-						me.levelupHashStack[lu] = me.hashStack[keys[i]];
+						g = me.abilityStore.findRecord("code", lu)["data"];
+						if (g.generate && g.generate[Math.min(g.generate.length - 1, a - 2)]) {
+							k = me.abilityStore.findRecord("code", keys[i]);
+							if (k.get("require")) {
+								if (me.hashStack[k.get("require")]) {
+									me.levelupStack.push(g);
+									me.levelupHashStack[lu] = me.hashStack[keys[i]]
+								}
+							} else {
+								me.levelupStack.push(g);
+								me.levelupHashStack[lu] = me.hashStack[keys[i]]
+							}
+						}
 					}
 				}
 			}
@@ -338,13 +423,15 @@ Ext.define('PSO2.AbilitySet', {
 
 		/* 継承率アップ系 */
 		for (key in me.hashStack) {
-			rec = me.abilityStore.findRecord('code', key);
+			rec = me.abilityStore.findRecord("code", key);
 			if (rec && rec.get('extup')) {
 				Ext.Array.forEach(rec.get('extup'), function(cd) {
-					if (Ext.Array.indexOf(me.exStack, cd) < 0) {
-						me.exStack.push(cd);
+					if (!me.exStack[cd]) {
+						me.exStack[cd] = [rec.get("rel")]
+					} else {
+						me.exStack[cd].push(rec.get("rel"))
 					}
-				});
+				})
 			}
 		}
 
@@ -355,15 +442,21 @@ Ext.define('PSO2.AbilitySet', {
 
 			if (ref) {
 				for (i = 0; i < ref.length; i++) {
-					index = me.indexOf(me.stack, 'code', ref[i]);
-					if (index < 0) {
-						/* 新規で能力を追加 */
-						if (me.indexOf(me.levelupStack, 'code', ref[i]) < 0) {
-							me.refStack.push(me.abilityStore.findRecord('code', ref[i])['data']);
+					if (rec.success) {
+						index = me.indexOf(me.stack, "code", ref[i]);
+						if (index < 0) {
+							/* 新規で能力を追加 */
+							if (me.indexOf(me.levelupStack, "code", ref[i]) < 0) {
+								me.refStack.push(me.abilityStore.findRecord("code", ref[i])["data"])
+							}
+						}
+						/* 固定確率を設定 */
+						me.refHashStack[ref[i]] = rec.success
+					} else {
+						if (rec.bonus) {
+							me.refBonusStack[ref[i]] = rec.bonus
 						}
 					}
-					/* 固定確率を設定 */
-					me.refHashStack[ref[i]] = rec['success'];
 				}
 			}
 		}, me);
@@ -422,6 +515,31 @@ Ext.define('PSO2.AbilitySet', {
 	}
 });
 
+Ext.define("PSO2.AbilityStore", {
+	extend: "Ext.data.Store",
+	model: "PSO2.Ability",
+	groupField: "gid",
+	findRecord: function() {
+		var a = this.callParent(arguments);
+		if (a || !this.snapshot) {
+			return a
+		}
+		return this.findRecord2.apply(this, arguments)
+	},
+	find2: function(e, d, g, f, a, c) {
+		var b = this.createFilterFn(e, d, f, a, c);
+		return b ? this.snapshot.findIndexBy(b, null, g) : -1
+	},
+	findRecord2: function() {
+		var b = this,
+			a = b.find2.apply(b, arguments);
+		return a !== -1 ? b.getAt2(a) : null
+	},
+	getAt2: function(a) {
+		return this.snapshot.getAt(a)
+	}
+});
+
 /**
  * 特殊能力コンポーネント
  *
@@ -467,8 +585,11 @@ Ext.define('PSO2.AbilityComponent', {
 		{id: 'slot05', name: 'スロット5', slot: null},
 		{id: 'slot06', name: 'スロット6', slot: null},
 		{id: 'slot07', name: 'スロット7', slot: null},
-		{id: 'slot08', name: 'スロット8', slot: null}
+		{id: 'slot08', name: 'スロット8', slot: null},
+		{id: "slot09", name: "スロット9", slot: null}
 	],
+
+	excludePattern: [],
 
 	/**
 	 * コンストラクタ
@@ -492,11 +613,9 @@ Ext.define('PSO2.AbilityComponent', {
 		var me = this;
 
 		if (isNew === true) {
-			return Ext.create('Ext.data.Store', {
-				model: 'PSO2.Ability',
-				data: me.constAbility,
-				groupField: 'gid'
-			});
+			return Ext.create("PSO2.AbilityStore", {
+				data: this.constAbility
+			})
 		} else if (!me.abilityStore) {
 			/* 自インスタンス内に無い場合は、生成する */
 			me.abilityStore = me.getAbilityStore(true);
@@ -520,14 +639,17 @@ Ext.define('PSO2.AbilityComponent', {
 		len = codes.length;
 
 		for (i = 0; i < len; i++) {
-			var ab = codes[i], index = store.findBy(function(rec) {
-				if (rec.data['code'] == ab) {
-					return true;
-				}
-			});
-			if (index < 0) {
+			var ab = codes[i];
+			if (ab.substr(0, 1) == "*") {
+				ab = ab.substr(1)
+			}
+			if (0 > store.findBy(function(rec) {
+					if (rec.data.code == ab) {
+						return true
+					}
+				})) {
 				/* no hit */
-				return false;
+				return false
 			}
 		}
 
@@ -540,9 +662,30 @@ Ext.define('PSO2.AbilityComponent', {
 	 * @return {Ext.data.Store} 特殊能力追加スロット用のストアオブジェクト
 	 */
 	createSlotStore: function(fn) {
-		var store = Ext.create('Ext.data.Store', Ext.apply({
+		var me = this,
+			store = Ext.create('Ext.data.Store', Ext.apply({
 			model: 'PSO2.Slot',
 			data: this.constBaseSlot,
+			chkFn: function(h, m) {
+				var g = me.excludePattern,
+					f, e, l, d, k;
+				for (f = 0; f < g.length; f++) {
+					l = Ext.isArray(g[f]) ? g[f] : [g[f]];
+					d = k = false;
+					for (e = 0; e < l.length; e++) {
+						if (l[e] == m.substr(0, l[e].length)) {
+							d = true
+						}
+						if (l[e] == h.substr(0, l[e].length)) {
+							k = true
+						}
+					}
+					if (d && k) {
+						return true
+					}
+				}
+				return false
+			},
 
 			/**
 			 * スロットへ特殊能力を追加する
@@ -552,6 +695,8 @@ Ext.define('PSO2.AbilityComponent', {
 			addAbility: function(data) {
 				var cd = data.code.substr(0, 2), slot,
 					len = this.getCount(), i;
+				var e = data.code.substr(0, 1) == "*",
+					f = e ? data.code.substr(1) : data.code;
 
 				/* 上書きできる同系統の能力があるかチェック */
 				for (i = 0; i < len; i++) {
@@ -560,10 +705,18 @@ Ext.define('PSO2.AbilityComponent', {
 					if (slot == null) break;
 
 					/* 全く同じ能力の場合は無視 */
-					if (slot.code == data.code) return true;
+					if ((slot.source && slot.source.code == f) || (slot.code == f)) {
+						return true
+					}
+					if ((slot.source && slot.source.code.substr(0, 2) == cd) || (slot.code.substr(
+							0, 2) == cd)) {
+						break
+					}
 
 					/* 同系統の場合は上書き可能 */
-					if (slot.code.substr(0, 2) == cd) break;
+					if (this.chkFn(data.code, slot.code)) {
+						break
+					}
 				}
 				/* 8スロ以上は却下 */
 				if (len <= i) return false;
@@ -580,6 +733,24 @@ Ext.define('PSO2.AbilityComponent', {
 				return this.getEnableData().length != 0;
 			},
 
+			swapAbility: function(e, f) {
+				var d = this.getCount(),
+					c, g = 0;
+				if (e == f) {
+					return false
+				}
+				while (g < d && (c = this.getAt(g).get("slot")) != null) {
+					g++
+				}
+				if (g <= f) {
+					f = g - 1
+				}
+				c = this.getAt(e).get("slot");
+				this.getAt(e).data.slot = this.getAt(f).get("slot");
+				this.getAt(f).data.slot = c;
+				return true
+			},
+
 			/**
 			 * スロットから特殊能力を削除する
 			 *
@@ -591,9 +762,13 @@ Ext.define('PSO2.AbilityComponent', {
 					len = this.getCount(), i;
 
 				/* 削除した場所からデータを上へ詰めていく */
-				for (i = rowIndex; i < len - 1; i++) {
-					me.getAt(i).data.slot = me.getAt(i + 1).get('slot');
-					me.getAt(i + 1).data.slot = null;
+				if ((len - 1) == rowIndex) {
+					this.getAt(rowIndex).data.slot = null
+				} else {
+					for (i = rowIndex; i < len - 1; i++) {
+						this.getAt(i).data.slot = this.getAt(i + 1).get("slot");
+						this.getAt(i + 1).data.slot = null
+					}
 				}
 
 				/* 更新イベントの発行 */
@@ -627,9 +802,19 @@ Ext.define('PSO2.AbilityComponent', {
 					ret = [];
 
 				Ext.Array.forEach(recs, function(rec) {
-					ret.push(rec['code']);
+					ret.push(rec.code)
 				});
 				return ret;
+			},
+			getFactorCount: function() {
+				var d = this.getEnableData(),
+					c = 0;
+				Ext.Array.forEach(d, function(e) {
+					if (e.factor) {
+						c++
+					}
+				});
+				return c
 			}
 		}, fn));
 
@@ -651,26 +836,45 @@ Ext.define('PSO2.AbilityComponent', {
 			status = rec.get('status'),
 			exboost = rec.get('exboost'),
 			cd = rec.get('code'),
-			useM = as.isMutation(),
+			useM1 = as.isMutationI(),
+			useM2 = as.isMutationII(),
 			useP = as.isPhotonCollect(),
 			level = me.getLevel(rec.get('name')),
-			s1 = 0, s2 = 0, s3 = 0, s4 = 0, boostFn = function(type) {
-				var sp = 0, sm = 0, ss = 0;
-
-				/* フォトンコレクト利用時のブースト値 */
-				if (me.constBoostPoint['photon'][type] && me.constBoostPoint['photon'][type][status])
-					sp = useP? me.constBoostPoint['photon'][type][status][level]: 0;
+			s1 = 0,
+			s2 = 0,
+			s3 = 0,
+			s4 = 0,
+			a = 0, 
+			boostFn = function(type, x) {
+				var ss = 0, sm1 = 0, sm2 = 0, E;
 
 				/* ミューテーションI利用時のブースト値 */
-				if (me.constBoostPoint['mutation'][type] && me.constBoostPoint['mutation'][type][status])
-					sm = useM? me.constBoostPoint['mutation'][type][status][level]: 0;
-
-				if (0 <= me.indexOf(as.exStack, cd) && sm == 0) {
-					/* 生成 or 継承率ブースト系が存在する場合の加算(非ミューテーション時) */
-					if (me.constBoostPoint['soul'][type] && me.constBoostPoint['soul'][type][status])
-						ss = me.constBoostPoint['soul'][type][status][level];
+				if (me.constBoostPoint.mutation1[type] && me.constBoostPoint.mutation1[type][status]) {
+					sm1 = useM1 ? me.constBoostPoint.mutation1[type][status][level] : 0
 				}
-				return sp + sm + ss;
+				if (me.constBoostPoint.mutation2[type] && me.constBoostPoint.mutation2[type][status]) {
+					sm2 = useM2 ? me.constBoostPoint.mutation2[type][status][level] : 0
+				}
+				E = me.indexOf(as.exStack, cd);
+
+				if (E) {
+					/* 生成 or 継承率ブースト系が存在する場合の加算(非ミューテーション時) */
+					var z = 0;
+					for (var y = 0; y < as.exStack[E].length; y++) {
+						if (me.constBoostPoint[as.exStack[E][y]][type] && me.constBoostPoint[as.exStack[
+								E][y]][type][status]) {
+							if (Ext.isObject(me.constBoostPoint[as.exStack[E][y]][type][status][level])) {
+								var A = me.constBoostPoint[as.exStack[E][y]][type][status][level]["boost"],
+									w = me.constBoostPoint[as.exStack[E][y]][type][status][level]["max"];
+								z = (x + A) <= w ? A : Math.abs(w - x)
+							} else {
+								z = me.constBoostPoint[as.exStack[E][y]][type][status][level]
+							}
+						}
+						ss = Math.max(ss, z)
+					}
+				}
+				return Math.max(sm1, sm2, ss)
 			};
 
 
@@ -691,20 +895,25 @@ Ext.define('PSO2.AbilityComponent', {
 			}
 		}
 		if (gen && as.levelupHashStack[cd]) {
-			/* レベルアップ時の対応 */
-			s3 = gen[me.overflow(gen.length, as.levelupHashStack[cd], 2)] + boostFn('create');
+			var u = 0;
+			s3 = gen[this.overflow(gen.length, as.levelupHashStack[cd], 2)] + boostFn("create", 0);
+			if (this.constBoostPoint.photon["create"] && this.constBoostPoint.photon[
+					"create"][status]) {
+				u = useP ? this.constBoostPoint.photon["create"][status][level] : 0
+			}
+			s3 = Math.max(s3, u)
 		}
 		if (status) {
-			/* ブースト値を成功確率に加算 */
-			s4 = s2 + boostFn('extend');
-		} else if (exboost) {
-			/* 個別ブーストが設定されている場合 */
-			if (0 <= me.indexOf(as.exStack, cd)) {
-				s4 = s2 + exboost;
+			if (s1 || s2) {
+				s4 = Math.max(s1 + boostFn("extend", s1), s2 + boostFn("extend", s2))
 			}
 		}
 
-		return Math.min(100, Math.max(Math.max(Math.max(s1, s2), s3), s4));
+		a = Math.max(Math.max(Math.max(s1, s2), s3), s4);
+		if (a && as.refBonusStack[cd]) {
+			a += as.refBonusStack[cd]
+		}
+		return Math.min(100, a)
 	},
 
 	/**
@@ -717,11 +926,25 @@ Ext.define('PSO2.AbilityComponent', {
 	 * @return 発見した位置、なければ-1を返す
 	 */
 	indexOf: function(arr, str) {
-		if (str && arr && Ext.isArray(arr))
-			for (i = 0; i < arr.length; i++)
-				if (arr[i] && arr[i] == str.substr(0, arr[i].length))
-					return i;
-		return -1;
+		if (str && arr) {
+			if (Ext.isArray(arr)) {
+				for (i = 0; i < arr.length; i++) {
+					if (arr[i] && arr[i] == str.substr(0, arr[i].length)) {
+						return i
+					}
+				}
+			} else {
+				if (Ext.isObject(arr)) {
+					for (var b in arr) {
+						if (b == str.substr(0, b.length)) {
+							return b
+						}
+					}
+					return null
+				}
+			}
+		}
+		return -1
 	},
 
 	/**
@@ -764,6 +987,8 @@ Ext.define('PSO2.AbilityComponent', {
 
 		if (0 < name.indexOf('IV')) {
 			v =  4;
+		} else if (0 < name.indexOf('VI')) {
+			v =  6
 		} else if (0 < name.indexOf('V')) {
 			v =  5;
 		} else if (0 < name.indexOf('III')) {
@@ -793,26 +1018,43 @@ Ext.define('PSO2.AbilityComponent', {
 			store = me.getAbilityStore(),
 			len = list.length, rec, i, success, res = [];
 
+			var xaaa= function(b, g, a) {}
+			var b,	//as
+			g,			//list
+			a;			//opt
+			// getSuccessList: function(b, g, a) {
+				var l = this,
+					n = (list.length + opt.length),	//nums
+					f = as.enableCheckMax == nums,	//useEx
+					m = (2 <= as.enableMaterial()),	//useDouble
+					o = this.getAbilityStore(),			//store
+					e = list.length,								//len
+					c,			//rec
+					d,			//i
+					p,			//success
+					h = [];	//res
+
 		/* 現在選択されている追加能力コードを元に確立を計算 */
 		for (i = 0; i < len; i++) {
 			/* レコードを探す */
-			rec = store.findRecord('code', list[i].inputValue);
-
+			var k = (list[i].inputValue.substr(0, 1) == "*");
+			rec = store.findRecord("code", k ? list[i].inputValue.substr(1) : list[i].inputValue);
 			if (rec) {
 				/* 確率の取得 */
-				success = me.calcSuccess(as, rec);
-				if (useEx) {
+				success = k ? 100 : this.calcSuccess(as, rec);
+				if (useEx && rec.get("notex") !== true) {
 					/* エクストラスロット使用時 */
-					success = parseInt((success * me.constExtra[nums - 1][useDouble]) / 100);
+					success = parseInt(success = (success * this.constExtra[nums - 1][useDouble]) / 100)
 				}
 				res.push({
-					name: rec.get('name'),
-					success: success
-				});
+					name: rec.get("name"),
+					success: success,
+					dom: rec.get("dom")
+				})
 			}
 		}
 
-		/* 特殊能力の確立計算 */
+		/* 特殊能力の確率計算 */
 		len = opt.length;
 		for (i = 0; i < len; i++) {
 			success = opt[i].get('extend');
@@ -822,7 +1064,8 @@ Ext.define('PSO2.AbilityComponent', {
 			}
 			res.push({
 				name: opt[i].get('name'),
-				success: success
+				success: success,
+				dom: opt[i].get("dom")
 			});
 		}
 		return res;
@@ -837,19 +1080,19 @@ Ext.define('PSO2.AbilityComponent', {
 	 */
 	getSuccessList2: function(as, list) {
 		var me = this,
-			useDouble = as.stores[1].exist() && as.stores[2].exist(),
+			useDouble = (2 <= as.enableMaterial()),
 			store = me.getAbilityStore(),
 			len = list.length, rec, i, success, res = {};
 
 		/* 現在選択されている追加能力コードを元に確立を計算 */
 		for (i = 0; i < len; i++) {
 			/* レコードを探す */
-			rec = store.findRecord('code', list[i]['code']);
-
+			var g = (list[i]["code"].substr(0, 1) == "*");
+			rec = store.findRecord("code", g ? list[i]["code"].substr(1) : list[i]["code"]);
 			if (rec) {
 				/* 確率の取得 */
-				success = me.calcSuccess(as, rec);
-				res[rec.get('code')] = success;
+				success = g ? 100 : this.calcSuccess(as, rec);
+				res[rec.get("code")] = success
 			}
 		}
 		return res;

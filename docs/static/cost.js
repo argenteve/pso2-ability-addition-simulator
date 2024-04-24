@@ -59,7 +59,7 @@ Ext.define('PSO2.CostPanel', {
 	 * @cfg {Number} maxMaterial
 	 * 素材の数
 	 */
-	maxMaterial: 2,
+	maxMaterial: 5,
 
 	/** @cfg {String} ddGroup @hide */
 	ddGroup: 'cost',
@@ -150,8 +150,8 @@ Ext.define('PSO2.CostPanel', {
 		var me = this,
 			cookie = PSO2.Cookie.get(me.constCookieName) || {},
 			costFieldItems = [], i,
-			op1 = PSO2.AbilityOption.support,
-			op2 = PSO2.AbilityOption.additional;
+			op1 = me.supportData,
+			op2 = me.additionalData;
 
 		for (i = 1; i < op1.length; i++) {
 			costFieldItems.push({
@@ -618,25 +618,27 @@ Ext.define('PSO2.CostPanel', {
 		var me = this,
 			cost = me;
 
-		v.dropZone = Ext.create('Ext.dd.DropZone', v.el, {
-			ddGroup: me.ddGroup,
-			getTargetFromEvent: function(e) {
-				return e.getTarget('.x-form-currency');
-			},
-			onNodeDrop : function(target, dd, e, data) {
-				var me = this,
-					owner = v.ownerCt.ownerCt;
+		if (me.noDD != true) {
+			v.dropZone = Ext.create('Ext.dd.DropZone', v.el, {
+				ddGroup: me.ddGroup,
+				getTargetFromEvent: function(e) {
+					return e.getTarget('.x-form-currency');
+				},
+				onNodeDrop : function(target, dd, e, data) {
+					var me = this,
+						owner = v.ownerCt.ownerCt;
 
-				/* 同じIDの場合はfalse */
-				if (data.costPanel.id == owner.id) return false;
+					/* 同じIDの場合はfalse */
+					if (data.costPanel.id == owner.id) return false;
 
-				/* 相手が未表示の場合はfalse */
-				if (owner.targetPanel.rendered !== true) return false;
+					/* 相手が未表示の場合はfalse */
+					if (owner.targetPanel.rendered !== true) return false;
 
-				/* 参照先が更新されたら場合のイベント */
-				return cost.registReferenceCost(Ext.getCmp(dd.id), v);
-			}
-		});
+					/* 参照先が更新されたら場合のイベント */
+					return cost.registReferenceCost(Ext.getCmp(dd.id), v);
+				}
+			});
+		}
 	},
 
 	/**

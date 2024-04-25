@@ -5,17 +5,28 @@
 	font-size: 120%;
 	font-weight: bold;
 	vertical-align: middel;
-	padding: 5px;
 	background-color: #142632;
-	color: white
+	color: white;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+.x-top-title h1 {
+	padding: 5px;
 }
 .x-top-author {
+	padding-right: 5px;
 	font-size: 72%;
-	bottom: 0
+	bottom: 0;
+	color: #888888;
+	text-align: right;
 }
 .x-top-author a {
 	color: white;
 	text-decoration: none;
+}
+.x-top-author img.icon {
+	height: 1em;
 }
 .x-resultpanel {
 	background: none

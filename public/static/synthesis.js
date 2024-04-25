@@ -549,18 +549,39 @@ Ext.define('PSO2.SynthesisComponent', {
 		items.push({
 			cls: 'app-header',
 			region: 'north',
-			height: 30,
+			height: 35,
 			layout: 'fit',
 			hidden: me.noDD,
-			html: [
-				'<div class="x-top-title">',
-					me.title + ' ver ' + me.version + '&nbsp;',
-					'<span class="x-top-author">',
-					'<a href="http://rxio.blog.fc2.com/?tag=PSO2" style="text-decoration:none">Pulsar@倉庫絆</a>&nbsp;&amp;&nbsp;',
-					'copyright &copy; 2014 <a target="_blank" href="http://pso2numao.web.fc2.com/dodo/" style="text-decoration:none">助右衛門@ship8</a>',
-					'</span>',
-				'</div>'
-			].join("")
+			html: `
+				<div class="x-top-title">
+					<h1>${me?.title || ''}</h1>
+					<div class="x-top-author">
+						<div>
+							Original(v1.5) created by 
+							<a target="_blank" href="http://rxio.blog.fc2.com/?tag=PSO2">
+								Pulsar@倉庫絆
+							</a>
+							&nbsp;&amp;&nbsp;
+							<a target="_blank" href="http://pso2numao.web.fc2.com/dodo/">
+								助右衛門@ship8
+							</a>
+							&nbsp;|&nbsp;
+							Upgraded with reference to 
+							<a target="_blank" href="http://melody.hiroimon.com/">
+								MELODY鯖
+							</a>
+							(v19.2)
+						</div>
+						<div>
+							Maintained by argenteve
+							&nbsp;|&nbsp;
+							<a target="_blank" href="https://github.com/argenteve/pso2-ability-addition-simulator">
+								<img class="icon" src="static/images/github.svg" />
+							</a>
+						</div>
+					</div>
+				</div>
+			`
 		});
 		/* フッタの表出 @@@@@ 自身のブログ宣伝などにご利用下さい(外しても問題ありません) @@@@@ */
 /*
@@ -850,13 +871,14 @@ Ext.define('PSO2.SynthesisComponent', {
 						{'T': '通常',   'V':  0, 'F': null},
 						{'T': '5% UP',  'V':  5, 'F': function(v) { return Math.min(v +  5, 100); }},
 						{'T': '10% UP', 'V': 10, 'F': function(v) { return Math.min(v + 10, 100); }},
-						{ T: "15% UP",V: 25,F: function(g) { return Math.min(g + 15, 100) } },
-						{ T: "20% UP", V: 30, F: function(g) { return Math.min(g + 20, 100) } },
-						{ T: "打撃力系", V: 11, F: function(g, x) { if (x == 1) { g = Math.min(g + 5, 100) } return g } },
-						{ T: "射撃力系", V: 12, F: function(g, x) { if (x == 2) { g = Math.min(g + 5, 100) } return g } },
-						{ T: "法撃力系", V: 13, F: function(g, x) { if (x == 3) { g = Math.min(g + 5, 100) } return g } },
-						{ T: "HP/PP系", V: 14, F: function(g, x) { if (x == 4) { g = Math.min(g + 5, 100) } return g } },
-						{ T: "特殊系", V: 15, F: function(g, x) { if (x == 5) { g = Math.min(g + 5, 100) } return g } }
+						{ T: "15% UP",V: 15,F: function(g) { return Math.min(g + 15, 100) } },
+						{ T: "20% UP", V: 20, F: function(g) { return Math.min(g + 20, 100) } },
+						{ T: "30% UP", V: 30, F: function(g) { return Math.min(g + 30, 100) } },
+						{ T: "打撃力系", V: 101, F: function(g, x) { if (x == 1) { g = Math.min(g + 5, 100) } return g } },
+						{ T: "射撃力系", V: 102, F: function(g, x) { if (x == 2) { g = Math.min(g + 5, 100) } return g } },
+						{ T: "法撃力系", V: 103, F: function(g, x) { if (x == 3) { g = Math.min(g + 5, 100) } return g } },
+						{ T: "HP/PP系", V: 104, F: function(g, x) { if (x == 4) { g = Math.min(g + 5, 100) } return g } },
+						{ T: "特殊系", V: 105, F: function(g, x) { if (x == 5) { g = Math.min(g + 5, 100) } return g } }
 					]
 				}),
 				displayField: 'T',

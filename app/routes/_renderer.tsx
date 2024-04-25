@@ -10,6 +10,8 @@ export default jsxRenderer(() => {
     <html lang="jp">
       <head>
       <meta name="viewport" content="width=device-width, initial-scale=0.5, maximum-scale=4" />
+      <meta name="keywords" content="PSO2,シミュレーター,特殊能力" />
+      <meta name="description" content="PSO2の特殊能力追加シミュレーターです。" />
       <title>PSO2 能力追加シミュレーター</title>
       <link rel="stylesheet" type="text/css" href="static/ext-4.0.7-gpl/resources/css/ext-all.css" />
       <link rel="stylesheet" type="text/css" href="static/default.css" />
